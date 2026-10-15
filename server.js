@@ -117,6 +117,11 @@ app.delete('/api/inventario/:id', (req, res) => {
   });
 });
 
+// Ruta de prueba para verificar que el servidor responde
+app.get('/', (req, res) => {
+  res.send('¡El servidor de Tomates San Sebastián está en línea y funcionando! 🍅');
+});
+
 // ==========================================
 // INICIO DEL SERVIDOR
 // ==========================================
