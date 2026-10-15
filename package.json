@@ -1,0 +1,13 @@
+{
+  "name": "control-cuarto-frio",
+  "version": "1.0.0",
+  "description": "Sistema de inventario y rendimiento para cuarto frio de tabacos",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "sqlite3": "^5.1.7"
+  }
+}
