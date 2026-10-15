@@ -11,7 +11,7 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // --- CONFIGURACIÓN DE RUTAS Y PERSISTENCIA (FLY.IO vs LOCAL) ---
-const isProduction = process.env.NODE_ENV === 'production' || process.env.FLY_APP_NAME;
+const isProduction = process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT || process.env.FLY_APP_NAME;
 const dataDir = isProduction ? '/app/data' : __dirname;
 
 // Si estamos en producción y la carpeta /app/data no existe, la crea
