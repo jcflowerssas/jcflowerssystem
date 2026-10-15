@@ -4,13 +4,15 @@ const fs = require('fs');
 const sqlite3 = require('sqlite3').verbose();
 
 const app = express();
-const PORT = process.env.PORT || 8080;
+
+// Usar el puerto dinámico asignado por Railway/entorno o 3000 por defecto
+const PORT = process.env.PORT || 3000;
 
 // Middleware para procesar JSON y archivos estáticos
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// --- CONFIGURACIÓN DE RUTAS Y PERSISTENCIA (FLY.IO vs LOCAL) ---
+// --- CONFIGURACIÓN DE RUTAS Y PERSISTENCIA (RAILWAY / FLY.IO vs LOCAL) ---
 const isProduction = process.env.NODE_ENV === 'production' || process.env.RAILWAY_ENVIRONMENT || process.env.FLY_APP_NAME;
 const dataDir = isProduction ? '/app/data' : __dirname;
 
@@ -19,7 +21,7 @@ if (isProduction && !fs.existsSync(dataDir)) {
   fs.mkdirSync(dataDir, { recursive: true });
 }
 
-// Opción A: Copia automática de tus datos locales al volumen persistente en el primer arranque
+// Copia automática de tus datos locales al volumen persistente en el primer arranque
 if (isProduction) {
   const archivosBase = ['database.sqlite', 'tobacos.db'];
   
