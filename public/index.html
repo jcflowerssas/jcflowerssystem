@@ -1,141 +1,341 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Control Cuarto Frío & Producción - Tomates San Sebastián</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control Cuarto Frío & Producción - Tomates San Sebastián</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body class="bg-slate-100 text-slate-800 font-sans min-h-screen">
+<body class="bg-slate-100 min-h-screen text-slate-800 font-sans">
 
-  <!-- Encabezado Principal y Menú de Pestañas -->
-  <header class="bg-indigo-900 text-white p-4 shadow-md">
-    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
-      <div>
-        <h1 class="text-xl font-bold flex items-center gap-2">
-          <span>📦</span> Control Cuarto Frío & Producción
-        </h1>
-        <p class="text-xs text-indigo-200">Tomates San Sebastián - Finca La Primavera</p>
-      </div>
-      <div class="flex flex-wrap gap-2">
-        <button id="tab-inventario" class="px-4 py-2 text-sm font-medium rounded-lg bg-blue-600 text-white shadow hover:bg-blue-700 transition">Inventario Principal</button>
-        <button id="tab-tabacos" class="px-4 py-2 text-sm font-medium rounded-lg bg-amber-800 text-white hover:bg-amber-700 transition">Tabacos Incompletos</button>
-        <button id="tab-rendimiento" class="px-4 py-2 text-sm font-medium rounded-lg bg-emerald-700 text-white hover:bg-emerald-600 transition">Cortadores y Rendimiento</button>
-        <button id="tab-bloques" class="px-4 py-2 text-sm font-medium rounded-lg bg-purple-800 text-white hover:bg-purple-700 transition">Producción por Bloque</button>
-      </div>
+    <!-- CABECERA Y NAVEGACIÓN -->
+    <header class="bg-indigo-900 text-white shadow-lg sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-3">
+                <span class="text-2xl">📦</span>
+                <div>
+                    <h1 class="text-xl font-bold leading-tight">Control Cuarto Frío & Producción</h1>
+                    <p class="text-xs text-indigo-200">Tomates San Sebastián - Finca La Primavera</p>
+                </div>
+            </div>
+            <nav class="flex flex-wrap items-center gap-2">
+                <button onclick="cambiarVista('inventario')" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-xs font-bold transition shadow">Inventario Principal</button>
+                <button onclick="cambiarVista('salidas')" class="px-4 py-2 bg-rose-600 hover:bg-rose-500 rounded-lg text-xs font-bold transition shadow">Salidas de Producto</button>
+                <button onclick="cambiarVista('incompletos')" class="px-4 py-2 bg-amber-700 hover:bg-amber-600 rounded-lg text-xs font-bold transition shadow">Tabacos Incompletos</button>
+                <button onclick="cambiarVista('cortadores')" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 rounded-lg text-xs font-bold transition shadow">Cortadores y Rendimiento</button>
+                <button onclick="cambiarVista('produccion')" class="px-4 py-2 bg-purple-700 hover:bg-purple-600 rounded-lg text-xs font-bold transition shadow">Producción por Bloque</button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
+
+        <!-- SECCIÓN 1: INVENTARIO PRINCIPAL -->
+        <section id="vista-inventario" class="space-y-6">
+            <div class="bg-white rounded-2xl shadow-sm p-6 border border-slate-200">
+                <h2 class="text-lg font-bold text-slate-800 mb-4">Resumen de Inventario por Clasificación y Grado</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse min-w-[700px]">
+                        <thead>
+                            <tr class="bg-slate-800 text-white text-xs uppercase font-semibold">
+                                <th class="p-3 rounded-l-lg">Tipo / Variedad</th>
+                                <th class="p-3 text-center">Grado 50</th>
+                                <th class="p-3 text-center">Grado 40</th>
+                                <th class="p-3 text-center bg-rose-900">Nacional</th>
+                                <th class="p-3 text-center rounded-r-lg">Total (Tallos / Tabacos)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 text-sm font-semibold">
+                            <tr>
+                                <td class="p-3 flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-red-600"></span> Freedom (Rojo)</td>
+                                <td id="rojo-g50" class="p-3 text-center font-bold text-blue-600 text-xs">0 tallos<br><span class="text-gray-500 font-normal">(0 tabacos)</span></td>
+                                <td id="rojo-g40" class="p-3 text-center font-bold text-blue-600 text-xs">0 tallos<br><span class="text-gray-500 font-normal">(0 tabacos)</span></td>
+                                <td id="rojo-nac" class="p-3 text-center font-bold text-rose-600 text-xs">0 tallos<br><span class="text-gray-500 font-normal">(0 tabacos)</span></td>
+                                <td id="rojo-total" class="p-3 text-center font-extrabold text-red-700 text-xs">0 tallos<br><span class="text-gray-500 font-normal">(0 tabacos)</span></td>
+                            </tr>
+                            <tr>
+                                <td class="p-3 flex items-center gap-2"><span class="w-3 h-3 rounded-full bg-amber-500"></span> Colores (Otras Variedades)</td>
+                                <td id="color-g50" class="p-3 text-center font-bold text-blue-600 text-xs">0 tallos<br><span class="text-gray-500 font-normal">(0 tabacos)</span></td>
+                                <td id="color-g40" class="p-3 text-center font-bold text-blue-600 text-xs">0 tallos<br><span class="text-gray-500 font-normal">(0 tabacos)</span></td>
+                                <td id="color-nac" class="p-3 text-center font-bold text-rose-600 text-xs">0 tallos<br><span class="text-gray-500 font-normal">(0 tabacos)</span></td>
+                                <td id="color-total" class="p-3 text-center font-extrabold text-amber-600 text-xs">0 tallos<br><span class="text-gray-500 font-normal">(0 tabacos)</span></td>
+                            </tr>
+                            <tr class="bg-slate-50 font-black text-slate-900">
+                                <td class="p-3">TOTAL GENERAL</td>
+                                <td id="tot-g50" class="p-3 text-center text-blue-700 text-xs">0 tallos<br><span class="text-gray-500 font-normal">(0 tabacos)</span></td>
+                                <td id="tot-g40" class="p-3 text-center text-blue-700 text-xs">0 tallos<br><span class="text-gray-500 font-normal">(0 tabacos)</span></td>
+                                <td id="tot-nac" class="p-3 text-center text-rose-700 text-xs">0 tallos<br><span class="text-gray-500 font-normal">(0 tabacos)</span></td>
+                                <td id="tot-general" class="p-3 text-center text-indigo-900 text-sm">0 tallos<br><span class="text-gray-600 font-normal">(0 tabacos)</span></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl shadow-sm border border-slate-200">
+                <div class="flex flex-wrap items-center gap-3 flex-1">
+                    <input type="text" id="input-buscar" placeholder="🔍 Buscar variedad, bloque..." class="px-3 py-2 border border-slate-300 rounded-lg text-sm w-full md:w-64 focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <select id="filtro-clasificacion" class="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white">
+                        <option value="todos">Todos los Tipos (Rojo y Colores)</option>
+                        <option value="freedom">Freedom (Rojo)</option>
+                        <option value="colores">Colores (Otras Variedades)</option>
+                    </select>
+                    <select id="filtro-grado" class="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white">
+                        <option value="todos">Todos los Grados</option>
+                        <option value="Grado 50">Grado 50</option>
+                        <option value="Grado 40">Grado 40</option>
+                        <option value="Nacional">Nacional</option>
+                    </select>
+                    <select id="filtro-antiguedad" class="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white">
+                        <option value="todos">Toda la Antigüedad</option>
+                        <option value="hoy">De Hoy</option>
+                        <option value="7dias">Últimos 7 días</option>
+                        <option value="30dias">Últimos 30 días</option>
+                    </select>
+                </div>
+                <button onclick="abrirModalEntrada()" class="px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg text-sm shadow transition">+ Registrar Entrada</button>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-200">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-700 text-xs uppercase font-bold tracking-wider border-b">
+                                <th class="p-3">Fecha</th>
+                                <th class="p-3">Ubicación</th>
+                                <th class="p-3">Bloque</th>
+                                <th class="p-3">Variedad</th>
+                                <th class="p-3">Tipo</th>
+                                <th class="p-3">Grado</th>
+                                <th class="p-3">Tabacos</th>
+                                <th class="p-3">Tallos/Tabaco</th>
+                                <th class="p-3">Total Tallos</th>
+                                <th class="p-3 text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-inventario-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN 2: SALIDAS DE PRODUCTO -->
+        <section id="vista-salidas" class="hidden space-y-6">
+            <div class="flex items-center justify-between bg-rose-50 p-4 rounded-2xl border border-rose-200">
+                <div>
+                    <h2 class="text-lg font-bold text-rose-900">Registro de Salidas de Producto</h2>
+                    <p class="text-xs text-rose-700">Control de despacho y salidas de mercancía del cuarto frío.</p>
+                </div>
+                <button onclick="abrirModalSalida()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg text-sm shadow">+ Registrar Salida</button>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-200">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-700 text-xs uppercase font-bold tracking-wider border-b">
+                                <th class="p-3">Fecha</th>
+                                <th class="p-3">Ubicación</th>
+                                <th class="p-3">Bloque</th>
+                                <th class="p-3">Variedad</th>
+                                <th class="p-3">Tipo</th>
+                                <th class="p-3">Grado</th>
+                                <th class="p-3">Tabacos</th>
+                                <th class="p-3">Tallos/Tabaco</th>
+                                <th class="p-3">Total Tallos</th>
+                                <th class="p-3 text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-salidas-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN 3: TABACOS INCOMPLETOS -->
+        <section id="vista-incompletos" class="hidden space-y-6">
+            <div class="flex items-center justify-between bg-amber-50 p-4 rounded-2xl border border-amber-200">
+                <div>
+                    <h2 class="text-lg font-bold text-amber-900">Control de Tabacos Incompletos</h2>
+                    <p class="text-xs text-amber-700">Gestiona lotes pendientes de completar antes de pasarlos al inventario principal.</p>
+                </div>
+                <button onclick="abrirModalIncompleto()" class="px-4 py-2 bg-amber-700 hover:bg-amber-800 text-white font-bold rounded-lg text-sm shadow">+ Registrar Incompleto</button>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-200">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-amber-100 text-amber-900 text-xs uppercase font-bold border-b">
+                                <th class="p-4">Ubicación</th>
+                                <th class="p-4">Bloque</th>
+                                <th class="p-4">Variedad</th>
+                                <th class="p-4">Grado</th>
+                                <th class="p-4">Tallos Actuales</th>
+                                <th class="p-4">Meta</th>
+                                <th class="p-4">Faltantes</th>
+                                <th class="p-4">Cortador</th>
+                                <th class="p-4 text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-incompletos-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN 4: CORTADORES Y RENDIMIENTO -->
+        <section id="vista-cortadores" class="hidden space-y-6">
+            <div class="flex items-center justify-between bg-emerald-50 p-4 rounded-2xl border border-emerald-200">
+                <div>
+                    <h2 class="text-lg font-bold text-emerald-900">Rendimiento de Cortadores y Auditoría</h2>
+                    <p class="text-xs text-emerald-700">Medición de productividad por horas efectivas trabajadas.</p>
+                </div>
+                <button onclick="abrirModalCortador()" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-lg text-sm shadow">+ Registrar Corte</button>
+            </div>
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                <h3 class="font-bold text-slate-800">Gráfico de Comparación de Rendimiento</h3>
+                <div class="h-72"><canvas id="graficoComparacionCortadores"></canvas></div>
+            </div>
+            <div class="bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-200">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-700 text-xs uppercase font-bold border-b">
+                                <th class="p-4">Fecha</th>
+                                <th class="p-4">Cortador</th>
+                                <th class="p-4">Bloque</th>
+                                <th class="p-4">Variedad</th>
+                                <th class="p-4">Horas</th>
+                                <th class="p-4">Total Tallos</th>
+                                <th class="p-4">Promedio / Hora</th>
+                                <th class="p-4 text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-cortadores-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- SECCIÓN 5: PRODUCCIÓN POR BLOQUE -->
+        <section id="vista-produccion" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                <h2 class="text-lg font-bold text-slate-800">Tendencia de Producción en Cuarto Frío</h2>
+                <div class="h-80"><canvas id="graficoProduccion"></canvas></div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- MODAL REGISTRAR SALIDA -->
+    <div id="modal-salida" class="hidden fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="font-bold text-lg text-rose-900">Registrar Salida de Producto</h3>
+                <button onclick="cerrarModal('modal-salida')" class="text-gray-400 hover:text-gray-600 font-bold">✕</button>
+            </div>
+            <form id="form-salida" onsubmit="guardarSalida(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Fecha</label>
+                    <input type="date" id="salida-fecha" required class="w-full border rounded-lg px-3 py-2 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Ubicación</label>
+                    <select id="salida-ubicacion" required class="w-full border rounded-lg px-3 py-2 text-sm bg-white">
+                        <option value="">-- Seleccione Ubicación --</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Bloque</label>
+                    <select id="salida-bloque" required class="w-full border rounded-lg px-3 py-2 text-sm bg-white">
+                        <option value="">-- Seleccione Bloque --</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Variedad</label>
+                    <select id="salida-variedad" required class="w-full border rounded-lg px-3 py-2 text-sm bg-white">
+                        <option value="">-- Seleccione Variedad --</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Grado</label>
+                    <select id="salida-grado" required class="w-full border rounded-lg px-3 py-2 text-sm bg-white">
+                        <option value="">-- Seleccione Grado --</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Cantidad Tabacos</label>
+                        <input type="number" id="salida-tabacos" placeholder="0" required class="w-full border rounded-lg px-3 py-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Tallos por Tabaco</label>
+                        <select id="salida-tallos" required class="w-full border rounded-lg px-3 py-2 text-sm bg-white">
+                            <option value="40">40 tallos</option>
+                            <option value="25">25 tallos</option>
+                            <option value="50">50 tallos</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 pt-3">
+                    <button type="button" onclick="cerrarModal('modal-salida')" class="px-4 py-2 bg-gray-200 rounded-lg text-sm font-bold">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-rose-600 text-white rounded-lg text-sm font-bold hover:bg-rose-700">Guardar Salida</button>
+                </div>
+            </form>
+        </div>
     </div>
-  </header>
 
-  <main class="max-w-7xl mx-auto p-4 space-y-6">
+    <!-- SCRIPT DE NAVEGACIÓN GARANTIZADO -->
+    <script>
+        function cambiarVista(vista) {
+            // LISTA COMPLETA DE TODAS LAS VISTAS
+            const vistas = ['vista-inventario', 'vista-salidas', 'vista-incompletos', 'vista-cortadores', 'vista-produccion'];
+            
+            // Ocultar rigurosamente todas las secciones agregándoles la clase 'hidden'
+            vistas.forEach(v => {
+                const el = document.getElementById(v);
+                if (el) {
+                    el.classList.add('hidden');
+                }
+            });
 
-    <!-- Matriz de Resumen: Freedom (Rojo) vs Colors y Grados -->
-    <section class="bg-white rounded-xl shadow p-5 space-y-4">
-      <h2 class="text-lg font-bold text-slate-700 border-b pb-2">Resumen de Inventario por Clasificación y Grado</h2>
+            // Mostrar exclusivamente la vista seleccionada removiendo 'hidden'
+            const vistaActiva = document.getElementById(`vista-${vista}`);
+            if (vistaActiva) {
+                vistaActiva.classList.remove('hidden');
+            }
 
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm text-left border-collapse">
-          <thead>
-            <tr class="bg-slate-800 text-white text-xs uppercase tracking-wider">
-              <th class="p-3 rounded-tl-lg">Tipo / Variedad</th>
-              <th class="p-3 text-center">Grado 50</th>
-              <th class="p-3 text-center">Grado 40</th>
-              <th class="p-3 text-center bg-rose-900">Nacional</th>
-              <th class="p-3 text-right rounded-tr-lg">Total Tallos</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-200">
-            <!-- Freedom (Rojo) -->
-            <tr class="hover:bg-slate-50 font-medium">
-              <td class="p-3 flex items-center gap-2">
-                <span class="w-3 h-3 rounded-full bg-red-600 inline-block"></span>
-                Freedom (Rojo)
-              </td>
-              <td id="rojo-g50" class="p-3 text-center text-slate-700 font-bold">0</td>
-              <td id="rojo-g40" class="p-3 text-center text-slate-700 font-bold">0</td>
-              <td id="rojo-nac" class="p-3 text-center text-rose-700 font-bold">0</td>
-              <td id="rojo-total" class="p-3 text-right text-red-700 font-extrabold">0</td>
-            </tr>
-            <!-- Colores -->
-            <tr class="hover:bg-slate-50 font-medium">
-              <td class="p-3 flex items-center gap-2">
-                <span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span>
-                Colores (Otras Variedades)
-              </td>
-              <td id="color-g50" class="p-3 text-center text-slate-700 font-bold">0</td>
-              <td id="color-g40" class="p-3 text-center text-slate-700 font-bold">0</td>
-              <td id="color-nac" class="p-3 text-center text-rose-700 font-bold">0</td>
-              <td id="color-total" class="p-3 text-right text-amber-700 font-extrabold">0</td>
-            </tr>
-            <!-- Fila Totales General -->
-            <tr class="bg-slate-100 font-extrabold text-slate-900 border-t-2 border-slate-300">
-              <td class="p-3">TOTAL GENERAL</td>
-              <td id="tot-g50" class="p-3 text-center text-blue-700">0</td>
-              <td id="tot-g40" class="p-3 text-center text-blue-700">0</td>
-              <td id="tot-nac" class="p-3 text-center text-rose-800">0</td>
-              <td id="tot-general" class="p-3 text-right text-indigo-900 text-base">0</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
+            // Ejecutar la carga de datos correspondiente según la pestaña activa
+            if (vista === 'inventario' && typeof cargarInventario === 'function') cargarInventario();
+            else if (vista === 'salidas' && typeof cargarSalidas === 'function') cargarSalidas();
+            else if (vista === 'incompletos' && typeof cargarIncompletos === 'function') cargarIncompletos();
+            else if (vista === 'cortadores' && typeof renderizarCortadores === 'function') renderizarCortadores();
+            else if (vista === 'produccion' && typeof renderizarGraficoProduccion === 'function') renderizarGraficoProduccion();
+        }
 
-    <!-- Barra de Búsqueda, Filtros y Botón de Entrada -->
-    <section class="bg-white rounded-xl shadow p-4 flex flex-col md:flex-row justify-between items-center gap-4">
-      <div class="flex flex-wrap gap-3 w-full md:w-auto">
-        <input type="text" id="input-buscar" placeholder="🔍 Buscar variedad, bloque..." class="border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 w-full sm:w-60">
-        
-        <select id="filtro-clasificacion" class="border rounded-lg px-3 py-2 text-sm bg-white">
-          <option value="todos">Todos los Tipos (Rojo y Colores)</option>
-          <option value="freedom">Solo Freedom (Rojo)</option>
-          <option value="colores">Solo Colores</option>
-        </select>
+        function abrirModalSalida() {
+            const m = document.getElementById('modal-salida');
+            if (m) {
+                m.classList.remove('hidden');
+                document.getElementById('salida-fecha').value = new Date().toISOString().split('T')[0];
+                if (typeof poblarSelectsSalidas === 'function') poblarSelectsSalidas();
+            }
+        }
 
-        <select id="filtro-grado" class="border rounded-lg px-3 py-2 text-sm bg-white">
-          <option value="todos">Todos los Grados</option>
-          <option value="50">Grado 50</option>
-          <option value="40">Grado 40</option>
-          <option value="Nacional">Nacional</option>
-        </select>
-      </div>
+        function cerrarModal(id) {
+            const m = document.getElementById(id);
+            if (m) m.classList.add('hidden');
+        }
+    </script>
 
-      <button id="btn-nueva-entrada" class="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-4 py-2 rounded-lg text-sm shadow transition w-full md:w-auto">
-        + Registrar Entrada
-      </button>
-    </section>
-
-    <!-- Tabla Principal de Inventario -->
-    <section class="bg-white rounded-xl shadow overflow-hidden">
-      <div class="overflow-x-auto">
-        <table class="w-full text-sm text-left">
-          <thead class="bg-slate-200 text-slate-700 uppercase text-xs">
-            <tr>
-              <th class="p-3">Fecha</th>
-              <th class="p-3">Ubicación</th>
-              <th class="p-3">Bloque</th>
-              <th class="p-3">Variedad</th>
-              <th class="p-3">Tipo</th>
-              <th class="p-3">Grado</th>
-              <th class="p-3">Tabacos</th>
-              <th class="p-3">Tallos/Tabaco</th>
-              <th class="p-3">Total Tallos</th>
-              <th class="p-3 text-center">Acciones</th>
-            </tr>
-          </thead>
-          <tbody id="tabla-inventario-body" class="divide-y divide-slate-100">
-            <!-- Se completa dinámicamente mediante inventario.js -->
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-  </main>
-
-  <!-- Vinculación de Scripts JS locales desde public/js/ -->
-  <script src="js/main.js"></script>
-  <script src="js/inventario.js"></script>
-  <script src="js/incompletos.js"></script>
-  <script src="js/cortadores.js"></script>
-  <script src="js/produccion.js"></script>
-  <script src="js/configuracion.js"></script>
+    <!-- CARGA DE ARCHIVOS JAVASCRIPT DE LA APLICACIÓN -->
+    <script src="js/main.js"></script>
+    <script src="js/configuracion.js"></script>
+    <script src="js/inventario.js"></script>
+    <script src="js/salidas.js"></script>
+    <script src="js/incompletos.js"></script>
+    <script src="js/cortadores.js"></script>
+    <script src="js/produccion.js"></script>
 </body>
 </html>

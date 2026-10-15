@@ -4,18 +4,20 @@ document.addEventListener('DOMContentLoaded', () => {
   const inputBuscar = document.getElementById('input-buscar');
   const filtroClasificacion = document.getElementById('filtro-clasificacion');
   const filtroGrado = document.getElementById('filtro-grado');
+  const filtroAntiguedad = document.getElementById('filtro-antiguedad');
 
   if (inputBuscar) inputBuscar.addEventListener('input', filtrarYRenderizar);
   if (filtroClasificacion) filtroClasificacion.addEventListener('change', filtrarYRenderizar);
   if (filtroGrado) filtroGrado.addEventListener('change', filtrarYRenderizar);
+  if (filtroAntiguedad) filtroAntiguedad.addEventListener('change', filtrarYRenderizar);
 });
 
 let inventarioGlobal = [];
 
 async function cargarInventario() {
   try {
-    const res = await fetch('/api/inventario'); // Ajusta la ruta según tu backend si es diferente
-    inventarioGlobal = await res.json();
+    const res = await fetch('/api/inventario');
+    inventarioGlobal = res.ok ? await res.json() : [];
     filtrarYRenderizar();
   } catch (error) {
     console.error('Error al cargar el inventario:', error);
@@ -24,69 +26,84 @@ async function cargarInventario() {
 
 function esFreedom(variedad) {
   if (!variedad) return false;
-  return variedad.trim().toLowerCase() === 'freedom';
+  return variedad.trim().toLowerCase().includes('freedom');
 }
 
 function calcularMatrizTotales(items) {
   let matriz = {
-    rojo: { g50: 0, g40: 0, nac: 0, total: 0 },
-    color: { g50: 0, g40: 0, nac: 0, total: 0 },
-    totales: { g50: 0, g40: 0, nac: 0, general: 0 }
+    rojo: { g50: {tallos:0, tabacos:0}, g40: {tallos:0, tabacos:0}, nac: {tallos:0, tabacos:0}, total: {tallos:0, tabacos:0} },
+    color: { g50: {tallos:0, tabacos:0}, g40: {tallos:0, tabacos:0}, nac: {tallos:0, tabacos:0}, total: {tallos:0, tabacos:0} },
+    totales: { g50: {tallos:0, tabacos:0}, g40: {tallos:0, tabacos:0}, nac: {tallos:0, tabacos:0}, general: {tallos:0, tabacos:0} }
   };
 
   items.forEach(item => {
-    const totalTallos = (item.tabacos || 0) * (item.tallosPorTabaco || 0);
+    const numTabacos = Number(item.tabacos) || 0;
+    const tallosPorTabaco = Number(item.tallosPorTabaco) || 0;
+    const totalTallos = numTabacos * tallosPorTabaco;
     const esRojo = esFreedom(item.variedad);
     const grado = String(item.grado || '').trim().toLowerCase();
 
-    if (esRojo) {
-      matriz.rojo.total += totalTallos;
-      if (grado === '50' || grado.includes('50')) matriz.rojo.g50 += totalTallos;
-      else if (grado === '40' || grado.includes('40')) matriz.rojo.g40 += totalTallos;
-      else matriz.rojo.nac += totalTallos;
+    const destino = esRojo ? matriz.rojo : matriz.color;
+
+    destino.total.tallos += totalTallos;
+    destino.total.tabacos += numTabacos;
+
+    if (grado.includes('50')) {
+      destino.g50.tallos += totalTallos;
+      destino.g50.tabacos += numTabacos;
+    } else if (grado.includes('40')) {
+      destino.g40.tallos += totalTallos;
+      destino.g40.tabacos += numTabacos;
     } else {
-      matriz.color.total += totalTallos;
-      if (grado === '50' || grado.includes('50')) matriz.color.g50 += totalTallos;
-      else if (grado === '40' || grado.includes('40')) matriz.color.g40 += totalTallos;
-      else matriz.color.nac += totalTallos;
+      destino.nac.tallos += totalTallos;
+      destino.nac.tabacos += numTabacos;
     }
   });
 
-  matriz.totales.g50 = matriz.rojo.g50 + matriz.color.g50;
-  matriz.totales.g40 = matriz.rojo.g40 + matriz.color.g40;
-  matriz.totales.nac = matriz.rojo.nac + matriz.color.nac;
-  matriz.totales.general = matriz.rojo.total + matriz.color.total;
+  ['g50', 'g40', 'nac', 'total'].forEach(k => {
+    if(k === 'total') {
+      matriz.totales.general.tallos = matriz.rojo.total.tallos + matriz.color.total.tallos;
+      matriz.totales.general.tabacos = matriz.rojo.total.tabacos + matriz.color.total.tabacos;
+    } else {
+      matriz.totales[k].tallos = matriz.rojo[k].tallos + matriz.color[k].tallos;
+      matriz.totales[k].tabacos = matriz.rojo[k].tabacos + matriz.color[k].tabacos;
+    }
+  });
 
-  // Actualizar la interfaz visual de la matriz si existen los elementos
-  actualizarElementoDOM('rojo-g50', matriz.rojo.g50);
-  actualizarElementoDOM('rojo-g40', matriz.rojo.g40);
-  actualizarElementoDOM('rojo-nac', matriz.rojo.nac);
-  actualizarElementoDOM('rojo-total', matriz.rojo.total);
+  const pintarCelda = (id, obj) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.innerHTML = `${obj.tallos.toLocaleString()} tallos<br><span class="text-gray-500 font-normal">(${obj.tabacos} tabacos)</span>`;
+    }
+  };
 
-  actualizarElementoDOM('color-g50', matriz.color.g50);
-  actualizarElementoDOM('color-g40', matriz.color.g40);
-  actualizarElementoDOM('color-nac', matriz.color.nac);
-  actualizarElementoDOM('color-total', matriz.color.total);
+  pintarCelda('rojo-g50', matriz.rojo.g50);
+  pintarCelda('rojo-g40', matriz.rojo.g40);
+  pintarCelda('rojo-nac', matriz.rojo.nac);
+  pintarCelda('rojo-total', matriz.rojo.total);
 
-  actualizarElementoDOM('tot-g50', matriz.totales.g50);
-  actualizarElementoDOM('tot-g40', matriz.totales.g40);
-  actualizarElementoDOM('tot-nac', matriz.totales.nac);
-  actualizarElementoDOM('tot-general', matriz.totales.general);
-}
+  pintarCelda('color-g50', matriz.color.g50);
+  pintarCelda('color-g40', matriz.color.g40);
+  pintarCelda('color-nac', matriz.color.nac);
+  pintarCelda('color-total', matriz.color.total);
 
-function actualizarElementoDOM(id, valor) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = valor;
+  pintarCelda('tot-g50', matriz.totales.g50);
+  pintarCelda('tot-g40', matriz.totales.g40);
+  pintarCelda('tot-nac', matriz.totales.nac);
+  pintarCelda('tot-general', matriz.totales.general);
 }
 
 function filtrarYRenderizar() {
   const busqueda = document.getElementById('input-buscar')?.value.toLowerCase() || '';
   const filtroClasificacion = document.getElementById('filtro-clasificacion')?.value || 'todos';
   const filtroGrado = document.getElementById('filtro-grado')?.value || 'todos';
+  const filtroAntiguedad = document.getElementById('filtro-antiguedad')?.value || 'todos';
 
   const tbody = document.getElementById('tabla-inventario-body');
   if (!tbody) return;
   tbody.innerHTML = '';
+
+  const hoy = new Date();
 
   const filtrados = inventarioGlobal.filter(item => {
     const textoVariedad = (item.variedad || '').toLowerCase();
@@ -104,26 +121,34 @@ function filtrarYRenderizar() {
 
     let coincideGrado = true;
     if (filtroGrado !== 'todos') {
-      coincideGrado = String(item.grado || '').toLowerCase() === filtroGrado.toLowerCase();
+      coincideGrado = String(item.grado || '').toLowerCase().includes(filtroGrado.toLowerCase());
     }
 
-    return coincideBusqueda && coincideClasificacion && coincideGrado;
+    let coincideAntiguedad = true;
+    if (filtroAntiguedad !== 'todos' && item.fecha) {
+      const fechaItem = new Date(item.fecha);
+      const diferenciaDias = Math.floor((hoy - fechaItem) / (1000 * 60 * 60 * 24));
+
+      if (filtroAntiguedad === 'hoy') coincideAntiguedad = diferenciaDias === 0;
+      else if (filtroAntiguedad === '7dias') coincideAntiguedad = diferenciaDias <= 7;
+      else if (filtroAntiguedad === '30dias') coincideAntiguedad = diferenciaDias <= 30;
+    }
+
+    return coincideBusqueda && coincideClasificacion && coincideGrado && coincideAntiguedad;
   });
 
-  // Recalcular métricas de la matriz superior
   calcularMatrizTotales(filtrados);
 
-  // Renderizar filas de la tabla
   filtrados.forEach(item => {
-    const totalTallos = (item.tabacos || 0) * (item.tallosPorTabaco || 0);
+    const totalTallos = (Number(item.tabacos) || 0) * (Number(item.tallosPorTabaco) || 0);
     const esRojo = esFreedom(item.variedad);
 
     const tr = document.createElement('tr');
-    tr.className = 'hover:bg-slate-50 text-slate-700';
+    tr.className = 'hover:bg-slate-50 text-slate-700 border-b';
 
     tr.innerHTML = `
-      <td class="p-3">${item.fecha || ''}</td>
-      <td class="p-3">${item.ubicacion || ''}</td>
+      <td class="p-3 text-xs font-semibold text-slate-600">${item.fecha || ''}</td>
+      <td class="p-3 text-xs">${item.ubicacion || ''}</td>
       <td class="p-3 font-semibold">${item.bloque || ''}</td>
       <td class="p-3 font-bold">${item.variedad || ''}</td>
       <td class="p-3">
@@ -131,12 +156,12 @@ function filtrarYRenderizar() {
           ${esRojo ? 'Rojo' : 'Color'}
         </span>
       </td>
-      <td class="p-3">${item.grado || ''}</td>
-      <td class="p-3">${item.tabacos || 0}</td>
-      <td class="p-3">${item.tallosPorTabaco || 0}</td>
-      <td class="p-3 font-extrabold text-blue-900">${totalTallos}</td>
+      <td class="p-3 text-xs">${item.grado || ''}</td>
+      <td class="p-3 font-semibold text-slate-800">${item.tabacos || 0} tabacos</td>
+      <td class="p-3 text-xs text-slate-500">${item.tallosPorTabaco || 0} c/u</td>
+      <td class="p-3 font-extrabold text-blue-900">${totalTallos} tallos</td>
       <td class="p-3 text-center">
-        <button onclick="eliminarItem(${item.id})" class="text-rose-600 hover:text-rose-800 font-bold text-xs">Eliminar</button>
+        <button onclick="eliminarItem(${item.id})" class="px-2.5 py-1 bg-rose-100 text-rose-700 hover:bg-rose-200 rounded text-xs font-bold">Eliminar</button>
       </td>
     `;
 
@@ -145,7 +170,7 @@ function filtrarYRenderizar() {
 }
 
 async function eliminarItem(id) {
-  if (!confirm('¿Estás seguro de eliminar este registro?')) return;
+  if (!confirm('¿Estás seguro de eliminar este registro del inventario?')) return;
   try {
     const res = await fetch(`/api/inventario/${id}`, { method: 'DELETE' });
     if (res.ok) {
