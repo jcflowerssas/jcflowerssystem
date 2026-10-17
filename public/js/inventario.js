@@ -1,3 +1,5 @@
+let inventarioGlobal = [];
+
 document.addEventListener('DOMContentLoaded', () => {
   cargarInventario();
 
@@ -11,8 +13,6 @@ document.addEventListener('DOMContentLoaded', () => {
   if (filtroGrado) filtroGrado.addEventListener('change', filtrarYRenderizar);
   if (filtroAntiguedad) filtroAntiguedad.addEventListener('change', filtrarYRenderizar);
 });
-
-let inventarioGlobal = [];
 
 async function cargarInventario() {
   try {
@@ -139,6 +139,11 @@ function filtrarYRenderizar() {
 
   calcularMatrizTotales(filtrados);
 
+  if (filtrados.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="10" class="p-4 text-center text-gray-400">No hay registros en el inventario.</td></tr>`;
+    return;
+  }
+
   filtrados.forEach(item => {
     const totalTallos = (Number(item.tabacos) || 0) * (Number(item.tallosPorTabaco) || 0);
     const esRojo = esFreedom(item.variedad);
@@ -167,6 +172,60 @@ function filtrarYRenderizar() {
 
     tbody.appendChild(tr);
   });
+}
+
+function poblarSelectsEntrada() {
+    if (typeof listasGlobales === 'undefined') return;
+
+    const llenarSelect = (id, items) => {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        const actual = sel.value;
+        sel.innerHTML = `<option value="">-- Seleccione --</option>`;
+        (items || []).forEach(item => {
+            const opt = document.createElement('option');
+            opt.value = item;
+            opt.textContent = item;
+            sel.appendChild(opt);
+        });
+        if (actual) sel.value = actual;
+    };
+
+    llenarSelect('input-ubicacion', listasGlobales.ubicaciones);
+    llenarSelect('input-bloque', listasGlobales.bloques);
+    llenarSelect('input-variedad', listasGlobales.variedades);
+    llenarSelect('input-grado', listasGlobales.grados);
+}
+
+async function guardarEntrada(e) {
+    e.preventDefault();
+    const nuevaEntrada = {
+        fecha: document.getElementById('input-fecha-ingreso').value,
+        ubicacion: document.getElementById('input-ubicacion').value,
+        bloque: document.getElementById('input-bloque').value,
+        variedad: document.getElementById('input-variedad').value,
+        grado: document.getElementById('input-grado').value,
+        tabacos: parseInt(document.getElementById('input-tabacos').value) || 0,
+        tallosPorTabaco: parseInt(document.getElementById('input-tallos').value) || 40
+    };
+
+    try {
+        const res = await fetch('/api/inventario', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(nuevaEntrada)
+        });
+
+        if (res.ok) {
+            cerrarModal('modal-entrada');
+            e.target.reset();
+            cargarInventario();
+        } else {
+            alert('No se pudo registrar la entrada.');
+        }
+    } catch (error) {
+        console.error('Error al guardar entrada:', error);
+    }
 }
 
 async function eliminarItem(id) {

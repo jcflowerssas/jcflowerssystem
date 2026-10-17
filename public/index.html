@@ -228,6 +228,64 @@
 
     </main>
 
+    <!-- MODAL REGISTRAR ENTRADA -->
+    <div id="modal-entrada" class="hidden fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="font-bold text-lg text-blue-900">Registrar Entrada al Inventario</h3>
+                <button onclick="cerrarModal('modal-entrada')" class="text-gray-400 hover:text-gray-600 font-bold">✕</button>
+            </div>
+            <form id="form-entrada" onsubmit="guardarEntrada(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Fecha</label>
+                    <input type="date" id="input-fecha-ingreso" required class="w-full border rounded-lg px-3 py-2 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Ubicación</label>
+                    <select id="input-ubicacion" required class="w-full border rounded-lg px-3 py-2 text-sm bg-white">
+                        <option value="">-- Seleccione Ubicación --</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Bloque</label>
+                    <select id="input-bloque" required class="w-full border rounded-lg px-3 py-2 text-sm bg-white">
+                        <option value="">-- Seleccione Bloque --</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Variedad</label>
+                    <select id="input-variedad" required class="w-full border rounded-lg px-3 py-2 text-sm bg-white">
+                        <option value="">-- Seleccione Variedad --</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Grado</label>
+                    <select id="input-grado" required class="w-full border rounded-lg px-3 py-2 text-sm bg-white">
+                        <option value="">-- Seleccione Grado --</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Cantidad Tabacos</label>
+                        <input type="number" id="input-tabacos" placeholder="0" required class="w-full border rounded-lg px-3 py-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Tallos por Tabaco</label>
+                        <select id="input-tallos" required class="w-full border rounded-lg px-3 py-2 text-sm bg-white">
+                            <option value="40">40 tallos</option>
+                            <option value="25">25 tallos</option>
+                            <option value="50">50 tallos</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 pt-3">
+                    <button type="button" onclick="cerrarModal('modal-entrada')" class="px-4 py-2 bg-gray-200 rounded-lg text-sm font-bold">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold hover:bg-blue-700">Guardar Entrada</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- MODAL REGISTRAR SALIDA -->
     <div id="modal-salida" class="hidden fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4">
         <div class="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl space-y-4">
@@ -286,32 +344,31 @@
         </div>
     </div>
 
-    <!-- SCRIPT DE NAVEGACIÓN GARANTIZADO -->
+    <!-- SCRIPT DE NAVEGACIÓN Y APERTURA DE MODALES -->
     <script>
         function cambiarVista(vista) {
-            // LISTA COMPLETA DE TODAS LAS VISTAS
             const vistas = ['vista-inventario', 'vista-salidas', 'vista-incompletos', 'vista-cortadores', 'vista-produccion'];
-            
-            // Ocultar rigurosamente todas las secciones agregándoles la clase 'hidden'
             vistas.forEach(v => {
                 const el = document.getElementById(v);
-                if (el) {
-                    el.classList.add('hidden');
-                }
+                if (el) el.classList.add('hidden');
             });
-
-            // Mostrar exclusivamente la vista seleccionada removiendo 'hidden'
             const vistaActiva = document.getElementById(`vista-${vista}`);
-            if (vistaActiva) {
-                vistaActiva.classList.remove('hidden');
-            }
+            if (vistaActiva) vistaActiva.classList.remove('hidden');
 
-            // Ejecutar la carga de datos correspondiente según la pestaña activa
             if (vista === 'inventario' && typeof cargarInventario === 'function') cargarInventario();
             else if (vista === 'salidas' && typeof cargarSalidas === 'function') cargarSalidas();
             else if (vista === 'incompletos' && typeof cargarIncompletos === 'function') cargarIncompletos();
             else if (vista === 'cortadores' && typeof renderizarCortadores === 'function') renderizarCortadores();
             else if (vista === 'produccion' && typeof renderizarGraficoProduccion === 'function') renderizarGraficoProduccion();
+        }
+
+        function abrirModalEntrada() {
+            const m = document.getElementById('modal-entrada');
+            if (m) {
+                m.classList.remove('hidden');
+                document.getElementById('input-fecha-ingreso').value = new Date().toISOString().split('T')[0];
+                if (typeof poblarSelectsEntrada === 'function') poblarSelectsEntrada();
+            }
         }
 
         function abrirModalSalida() {
@@ -329,7 +386,7 @@
         }
     </script>
 
-    <!-- CARGA DE ARCHIVOS JAVASCRIPT DE LA APLICACIÓN -->
+    <!-- ARCHIVOS JAVASCRIPT -->
     <script src="js/main.js"></script>
     <script src="js/configuracion.js"></script>
     <script src="js/inventario.js"></script>
