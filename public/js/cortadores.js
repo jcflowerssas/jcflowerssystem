@@ -31,6 +31,7 @@ window.poblarSelectsCortador = function() {
         actualizarTodosLosSelects();
         return;
     }
+   
 
     // Respaldo manual para poblar el desplegable de cortadores
     const selectCortador = document.getElementById('sc-cortador');
@@ -62,6 +63,7 @@ window.poblarSelectsCortador = function() {
             selectVariedad.innerHTML += `<option value="${v}">${v}</option>`;
         });
     }
+    
 };
 
 function calcularHorasTrabajadas(horaInicio, horaFin) {
@@ -109,38 +111,82 @@ function renderizarCortadores() {
     renderizarGraficoCortadores();
 }
 
-async function guardarCorte(e) {
-    e.preventDefault();
-    const nuevoCorte = {
-        fecha: document.getElementById('sc-fecha').value,
-        cortador: document.getElementById('sc-cortador').value,
-        bloque: document.getElementById('sc-bloque').value,
-        variedad: document.getElementById('sc-variedad').value,
-        horaInicio: document.getElementById('sc-hora-inicio').value,
-        horaFin: document.getElementById('sc-hora-fin').value,
-        tabacos: parseInt(document.getElementById('sc-tabacos').value) || 0,
-        tallosPorTabaco: parseInt(document.getElementById('sc-tallos-tabaco').value) || 40,
-        tallosDirectos: parseInt(document.getElementById('sc-tallos-directos').value) || 0
+window.guardarCorte = function(event) {
+    event.preventDefault();
+
+    const fecha = document.getElementById('sc-fecha').value;
+    const cortador = document.getElementById('sc-cortador').value;
+    const horaInicio = document.getElementById('sc-hora-inicio').value;
+    const horaFin = document.getElementById('sc-hora-fin').value;
+    const tabacos = parseInt(document.getElementById('sc-tabacos').value) || 0;
+    const tallosPorTabaco = parseInt(document.getElementById('sc-tallos-tabaco').value) || 0;
+    const tallosDirectos = parseInt(document.getElementById('sc-tallos-directos').value) || 0;
+
+    // Recolectar múltiples bloques seleccionados
+    const bloquesSeleccionados = Array.from(document.querySelectorAll('input[name="sc-bloque-check"]:checked'))
+        .map(cb => cb.value);
+
+    // Recolectar múltiples variedades seleccionadas
+    const variedadesSeleccionadas = Array.from(document.querySelectorAll('input[name="sc-variedad-check"]:checked'))
+        .map(cb => cb.value);
+
+    if (bloquesSeleccionados.length === 0) {
+        alert('Por favor selecciona al menos un bloque.');
+        return;
+    }
+
+    if (variedadesSeleccionadas.length === 0) {
+        alert('Por favor selecciona al menos una variedad.');
+        return;
+    }
+
+    const bloqueTexto = bloquesSeleccionados.join(', ');
+    const variedadTexto = variedadesSeleccionadas.join(', ');
+
+    // Calcular horas trabajadas
+    let horas = 0;
+    if (horaInicio && horaFin) {
+        const [h1, m1] = horaInicio.split(':').map(Number);
+        const [h2, m2] = horaFin.split(':').map(Number);
+        const inicioMin = h1 * 60 + m1;
+        const finMin = h2 * 60 + m2;
+        horas = (finMin - inicioMin) / 60;
+        if (horas < 0) horas += 24; // Por si cruza la medianoche
+    }
+
+    const totalTallos = (tabacos * tallosPorTabaco) + tallosDirectos;
+    const promedioHora = horas > 0 ? Math.round(totalTallos / horas) : 0;
+
+    const nuevoRegistro = {
+        id: Date.now(),
+        fecha,
+        cortador,
+        bloque: bloqueTexto,
+        variedad: variedadTexto,
+        horaInicio,
+        horaFin,
+        horas: horas.toFixed(2),
+        tabacos,
+        tallosPorTabaco,
+        tallosDirectos,
+        totalTallos,
+        promedioHora
     };
 
-    try {
-        const res = await fetch('/api/cortes', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(nuevoCorte)
-        });
+    // Guardar en localStorage de producción
+    const cortesGuardados = JSON.parse(localStorage.getItem('app_cortes') || '[]');
+    cortesGuardados.push(nuevoRegistro);
+    localStorage.setItem('app_cortes', JSON.stringify(cortesGuardados));
 
-        if (res.ok) {
-            cerrarModal('modal-cortador');
-            e.target.reset();
-            cargarCortes();
-        } else {
-            alert('No se pudo guardar el registro de corte.');
-        }
-    } catch (err) {
-        console.error('Error al guardar corte:', err);
+    // Resetear formulario y cerrar modal
+    document.getElementById('form-cortador').reset();
+    cerrarModal('modal-cortador');
+
+    // Recargar vista de cortadores
+    if (typeof renderizarCortadores === 'function') {
+        renderizarCortadores();
     }
-}
+};
 
 async function eliminarCorte(id) {
     if (!confirm('¿Deseas eliminar este registro de corte?')) return;

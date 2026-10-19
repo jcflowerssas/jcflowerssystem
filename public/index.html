@@ -478,12 +478,12 @@
         </div>
     </div>
 
-    <!-- MODAL REGISTRAR CORTE / RENDIMIENTO CORTADOR -->
+    <!-- MODAL REGISTRAR CORTE / RENDIMIENTO CORTADOR (SELECCIÓN MÚLTIPLE) -->
     <div id="modal-cortador" class="hidden fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4">
         <div class="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl space-y-4">
             <div class="flex justify-between items-center border-b pb-3">
                 <h3 class="font-bold text-lg text-emerald-900">Registrar Corte y Rendimiento</h3>
-                <button onclick="cerrarModal('modal-cortador')" class="text-gray-400 hover:text-gray-600 font-bold">✕</button>
+                <button type="button" onclick="cerrarModal('modal-cortador')" class="text-gray-400 hover:text-gray-600 font-bold">✕</button>
             </div>
             <form id="form-cortador" onsubmit="guardarCorte(event)" class="space-y-3">
                 <div>
@@ -496,18 +496,22 @@
                         <option value="">-- Seleccione Cortador --</option>
                     </select>
                 </div>
+
+                <!-- SELECCIÓN MÚLTIPLE DE BLOQUES -->
                 <div>
-                    <label class="block text-xs font-bold text-slate-600 mb-1">Bloque</label>
-                    <select id="sc-bloque" required class="w-full border rounded-lg px-3 py-2 text-sm bg-white">
-                        <option value="">-- Seleccione Bloque --</option>
-                    </select>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Bloque(s) <span class="text-emerald-700 text-[10px]">(Puede elegir varios)</span></label>
+                    <div id="sc-bloques-contenedor" class="border rounded-lg p-2 max-h-32 overflow-y-auto bg-slate-50 space-y-1 text-sm border-slate-300">
+                     <p class="text-xs text-gray-400 italic">Cargando bloques...</p>
+                    </div>
                 </div>
+
+                <!-- SELECCIÓN MÚLTIPLE DE VARIEDADES -->
                 <div>
-                    <label class="block text-xs font-bold text-slate-600 mb-1">Variedad</label>
-                    <select id="sc-variedad" required class="w-full border rounded-lg px-3 py-2 text-sm bg-white">
-                        <option value="">-- Seleccione Variedad --</option>
-                    </select>
-                </div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Variedad(es) <span class="text-emerald-700 text-[10px]">(Puede elegir varias)</span></label>
+                        <div id="sc-variedades-contenedor" class="border rounded-lg p-2 max-h-32 overflow-y-auto bg-slate-50 space-y-1 text-sm border-slate-300">
+                         <p class="text-xs text-gray-400 italic">Cargando variedades...</p>
+                        </div>
+                    </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-bold text-slate-600 mb-1">Hora Inicio</label>
