@@ -43,8 +43,19 @@ window.abrirModalCortador = function() {
     const m = document.getElementById('modal-cortador');
     if (m) {
         m.classList.remove('hidden');
-        document.getElementById('sc-fecha').value = new Date().toISOString().split('T')[0];
-        if (typeof poblarSelectsCortador === 'function') poblarSelectsCortador();
+        
+        // Asignar fecha de hoy automáticamente
+        const campoFecha = document.getElementById('sc-fecha');
+        if (campoFecha) {
+            campoFecha.value = new Date().toISOString().split('T')[0];
+        }
+
+        // Cargar inmediatamente la lista de cortadores, bloques y variedades
+        if (typeof poblarSelectsCortador === 'function') {
+            poblarSelectsCortador();
+        } else if (typeof actualizarTodosLosSelects === 'function') {
+            actualizarTodosLosSelects();
+        }
     }
 };
 

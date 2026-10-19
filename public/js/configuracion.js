@@ -1,167 +1,140 @@
-let listasGlobales = { bloques: [], variedades: [], ubicaciones: [], grados: [] };
+// Valores por defecto si la base de datos local está vacía
+const configuracionDefecto = {
+    ubicaciones: ['Mesa 1', 'Mesa 2', 'Mesa 3', 'Cuarto Frío Principal', 'Zona A', 'Zona B'],
+    bloques: ['Bloque 1', 'Bloque 2', 'Bloque 3', 'Bloque 4', 'Bloque 5', 'Bloque 6'],
+    variedades: ['Freedom (Rojo)', 'Vendela', 'Mondial', 'Gotcha', 'Explorer', 'Topaz'],
+    grados: ['Grado 50', 'Grado 40', 'Nacional'],
+    cortadores: ['Juan Pérez', 'María Gómez', 'Carlos Rodríguez', 'Ana Martínez']
+};
 
-async function cargarListasConfiguradas() {
-    try {
-        const res = await fetch('/api/config/listas');
-        if (res.ok) {
-            listasGlobales = await res.json();
-            poblarSelectsDinamicos();
+// Obtener listas guardadas o usar las por defecto
+function obtenerConfiguracion() {
+    const configGuardada = localStorage.getItem('app_configuracion_listas');
+    if (configGuardada) {
+        try {
+            return JSON.parse(configGuardada);
+        } catch (e) {
+            console.error("Error al leer configuración:", e);
         }
-    } catch (err) {
-        console.error("Error al cargar listas:", err);
     }
+    localStorage.setItem('app_configuracion_listas', JSON.stringify(configuracionDefecto));
+    return configuracionDefecto;
 }
 
-// Hacemos la función accesible globalmente
-window.cargarListasConfiguradas = cargarListasConfiguradas;
+// Cargar y mostrar los elementos actuales en la sección de configuración
+window.cargarListasConfiguradas = function() {
+    const config = obtenerConfiguracion();
 
-function poblarSelectsDinamicos() {
-    const llenarSelect = (id, items, esFiltro = false, textoDefault = 'Seleccione...') => {
-        const sel = document.getElementById(id);
-        if (!sel) return;
-        const actual = sel.value;
-        
-        sel.innerHTML = esFiltro ? `<option value="">Todos</option>` : `<option value="">-- ${textoDefault} --</option>`;
-        
-        items.forEach(item => {
-            const opt = document.createElement('option');
-            opt.value = item;
-            opt.textContent = item;
-            sel.appendChild(opt);
-        });
-        if (actual) sel.value = actual;
+    const mapaListas = {
+        ubicaciones: 'lista-ubicaciones',
+        bloques: 'lista-bloques',
+        variedades: 'lista-variedades',
+        grados: 'lista-grados',
+        cortadores: 'lista-cortadores'
     };
 
-    ['input-bloque', 'inc-bloque', 'sc-bloque'].forEach(id => llenarSelect(id, listasGlobales.bloques, false, 'Bloque'));
-    ['filtro-bloque', 'filtro-grafico-bloque'].forEach(id => llenarSelect(id, listasGlobales.bloques, true));
+    Object.keys(mapaListas).forEach(tipo => {
+        const contenedor = document.getElementById(mapaListas[tipo]);
+        if (!contenedor) return;
 
-    // Llenar filtro de ubicación y select de entrada
-    llenarSelect('input-ubicacion', listasGlobales.ubicaciones, false, 'Ubicación');
-    llenarSelect('filtro-ubicacion', listasGlobales.ubicaciones, true);
+        contenedor.innerHTML = '';
+        const elementos = config[tipo] || [];
 
-    const gradosFmt = listasGlobales.grados.map(g => g.startsWith('Grado') ? g : `Grado ${g}`);
-    llenarSelect('input-grado', gradosFmt, false, 'Grado');
-    llenarSelect('filtro-grado', gradosFmt, true);
+        if (elementos.length === 0) {
+            contenedor.innerHTML = '<li class="py-2 text-xs text-gray-400 italic">No hay elementos registrados</li>';
+            return;
+        }
 
-    ['input-variedad', 'inc-variedad'].forEach(id => {
-        llenarSelect(id, listasGlobales.variedades, false, 'Variedad');
+        elementos.forEach((item, index) => {
+            const li = document.createElement('li');
+            li.className = 'py-2 flex items-center justify-between hover:bg-slate-50 px-2 rounded-lg transition';
+            li.innerHTML = `
+                <span class="font-medium text-slate-700">${item}</span>
+                <button type="button" onclick="eliminarItemConfig('${tipo}', ${index})" class="text-rose-500 hover:text-rose-700 text-xs font-bold p-1 rounded hover:bg-rose-50 transition" title="Eliminar">
+                    🗑️ Ocultar / Borrar
+                </button>
+            `;
+            contenedor.appendChild(li);
+        });
     });
 
-    const contenedorVar = document.getElementById('sc-variedades-container');
-    if (contenedorVar) {
-        contenedorVar.innerHTML = '';
-        if (listasGlobales.variedades.length === 0) {
-            contenedorVar.innerHTML = '<span class="text-xs text-gray-400">No hay variedades configuradas.</span>';
-        } else {
-            listasGlobales.variedades.forEach(v => {
-                contenedorVar.innerHTML += `
-                    <label class="flex items-center gap-2 cursor-pointer hover:bg-slate-100 p-1 rounded">
-                        <input type="checkbox" name="sc-variedad-chk" value="${v}" class="rounded text-emerald-600 focus:ring-emerald-500">
-                        <span class="text-slate-700 font-medium">${v}</span>
-                    </label>
-                `;
-            });
-        }
+    // Actualizar los selectores de los modales de entrada, salida y cortadores
+    actualizarTodosLosSelects();
+};
+
+// Agregar un nuevo elemento sin recargar la página
+window.agregarItemConfig = function(event, tipo) {
+    if (event) {
+        event.preventDefault(); // EVITA LA RECARGA DE LA PÁGINA
     }
-}
 
-function abrirModalAdmin() {
-    const pass = prompt("Ingrese la contraseña de Administrador:");
-    if (pass === null) return;
-    if (pass !== 'admin123') {
-        alert('Contraseña incorrecta.');
-        return;
-    }
-    renderizarListasAdmin();
-    document.getElementById('modal-admin').classList.remove('hidden');
-}
+    const input = document.getElementById(`nuevo-${tipo}`);
+    if (!input) return;
 
-function renderizarListasAdmin() {
-    const contenedor = document.getElementById('admin-lista-elementos');
-    if (!contenedor) return;
-    contenedor.innerHTML = '';
-
-    const categorias = [
-        { nombre: 'bloque', label: 'Bloques' },
-        { nombre: 'variedad', label: 'Variedades' },
-        { nombre: 'ubicacion', label: 'Ubicaciones' },
-        { nombre: 'grado', label: 'Grados' }
-    ];
-
-    categorias.forEach(cat => {
-        const items = cat.nombre === 'bloque' ? listasGlobales.bloques :
-                      cat.nombre === 'variedad' ? listasGlobales.variedades :
-                      cat.nombre === 'ubicacion' ? listasGlobales.ubicaciones : listasGlobales.grados;
-
-        contenedor.innerHTML += `<p class="text-xs font-bold text-purple-800 mt-2">${cat.label}:</p>`;
-        if (items.length === 0) {
-            contenedor.innerHTML += `<p class="text-xs text-gray-400 italic pl-2">Sin elementos</p>`;
-        } else {
-            const rowDiv = document.createElement('div');
-            rowDiv.className = 'flex flex-wrap gap-1.5 pl-2 mb-1';
-            items.forEach(item => {
-                rowDiv.innerHTML += `
-                    <span class="inline-flex items-center gap-1 bg-white border px-2 py-1 rounded shadow-sm text-xs font-medium text-slate-700">
-                        ${item}
-                        <button onclick="eliminarItemAdmin('${cat.nombre}', '${item}')" class="text-red-500 hover:text-red-700 font-bold ml-1">✕</button>
-                    </span>
-                `;
-            });
-            contenedor.appendChild(rowDiv);
-        }
-    });
-}
-
-async function agregarItemAdmin(e) {
-    e.preventDefault();
-    const categoria = document.getElementById('admin-cat').value;
-    const valor = document.getElementById('admin-nuevo-valor').value.trim();
-    const password = document.getElementById('admin-password-confirm').value;
-
+    const valor = input.value.trim();
     if (!valor) return;
 
-    try {
-        const res = await fetch('/api/config/listas', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ categoria, valor, password })
+    const config = obtenerConfiguracion();
+    if (!config[tipo]) config[tipo] = [];
+
+    // Evitar duplicados
+    if (!config[tipo].includes(valor)) {
+        config[tipo].push(valor);
+        localStorage.setItem('app_configuracion_listas', JSON.stringify(config));
+        input.value = '';
+        window.cargarListasConfiguradas();
+    } else {
+        alert('Este elemento ya existe en la lista.');
+    }
+};
+
+// Eliminar un elemento
+window.eliminarItemConfig = function(tipo, index) {
+    const config = obtenerConfiguracion();
+    if (config[tipo] && config[tipo][index] !== undefined) {
+        config[tipo].splice(index, 1);
+        localStorage.setItem('app_configuracion_listas', JSON.stringify(config));
+        window.cargarListasConfiguradas();
+    }
+};
+
+// Poblar automáticamente todos los dropdowns/selects de los formularios
+window.actualizarTodosLosSelects = function() {
+    const config = obtenerConfiguracion();
+
+    const poblarSelect = (idSelect, lista, placeholder) => {
+        const select = document.getElementById(idSelect);
+        if (!select) return;
+        const valorPrevio = select.value;
+        select.innerHTML = `<option value="">-- ${placeholder} --</option>`;
+        (lista || []).forEach(opt => {
+            const option = document.createElement('option');
+            option.value = opt;
+            option.textContent = opt;
+            select.appendChild(option);
         });
+        if (valorPrevio) select.value = valorPrevio;
+    };
 
-        if (res.ok) {
-            document.getElementById('admin-nuevo-valor').value = '';
-            document.getElementById('admin-password-confirm').value = '';
-            await cargarListasConfiguradas();
-            renderizarListasAdmin();
-            alert('¡Elemento agregado exitosamente!');
-        } else {
-            const err = await res.json();
-            alert('Error: ' + (err.error || 'No se pudo guardar'));
-        }
-    } catch (err) {
-        alert('Error de conexión con el servidor.');
-    }
-}
+    // Modal Entrada
+    poblarSelect('input-ubicacion', config.ubicaciones, 'Seleccione Ubicación');
+    poblarSelect('input-bloque', config.bloques, 'Seleccione Bloque');
+    poblarSelect('input-variedad', config.variedades, 'Seleccione Variedad');
+    poblarSelect('input-grado', config.grados, 'Seleccione Grado');
 
-async function eliminarItemAdmin(categoria, valor) {
-    const pass = prompt(`Confirme la contraseña de Administrador para eliminar "${valor}":`);
-    if (pass === null) return;
-    if (pass !== 'admin123') {
-        alert('Contraseña incorrecta.');
-        return;
-    }
+    // Modal Salida
+    poblarSelect('salida-ubicacion', config.ubicaciones, 'Seleccione Ubicación');
+    poblarSelect('salida-bloque', config.bloques, 'Seleccione Bloque');
+    poblarSelect('salida-variedad', config.variedades, 'Seleccione Variedad');
+    poblarSelect('salida-grado', config.grados, 'Seleccione Grado');
 
-    try {
-        const res = await fetch(`/api/config/listas/${categoria}/${encodeURIComponent(valor)}`, {
-            method: 'DELETE'
-        });
+    // Modal Cortadores
+    poblarSelect('sc-cortador', config.cortadores, 'Seleccione Cortador');
+    poblarSelect('sc-bloque', config.bloques, 'Seleccione Bloque');
+    poblarSelect('sc-variedad', config.variedades, 'Seleccione Variedad');
+};
 
-        if (res.ok) {
-            await cargarListasConfiguradas();
-            renderizarListasAdmin();
-        } else {
-            alert('No se pudo eliminar el elemento.');
-        }
-    } catch (err) {
-        console.error('Error al eliminar elemento de lista:', err);
-    }
-}
+// Aliases para los modales
+window.poblarSelectsEntrada = window.actualizarTodosLosSelects;
+window.poblarSelectsSalidas = window.actualizarTodosLosSelects;
+window.poblarSelectsCortador = window.actualizarTodosLosSelects;

@@ -25,34 +25,44 @@ async function cargarCortes() {
     }
 }
 
-function poblarSelectsCortador() {
-    const selCortador = document.getElementById('sc-cortador');
-    if (selCortador) {
-        selCortador.innerHTML = `<option value="">-- Seleccione Cortador --</option>`;
-        listaCortadoresGlobal.forEach(c => {
-            const opt = document.createElement('option');
-            opt.value = c.nombre;
-            opt.textContent = c.nombre;
-            selCortador.appendChild(opt);
+window.poblarSelectsCortador = function() {
+    // Si la función global de actualización de listas existe, la ejecutamos
+    if (typeof actualizarTodosLosSelects === 'function') {
+        actualizarTodosLosSelects();
+        return;
+    }
+
+    // Respaldo manual para poblar el desplegable de cortadores
+    const selectCortador = document.getElementById('sc-cortador');
+    const selectBloque = document.getElementById('sc-bloque');
+    const selectVariedad = document.getElementById('sc-variedad');
+
+    const configGuardada = localStorage.getItem('app_configuracion_listas');
+    if (!configGuardada) return;
+
+    const config = JSON.parse(configGuardada);
+
+    if (selectCortador && config.cortadores) {
+        selectCortador.innerHTML = '<option value="">-- Seleccione Cortador --</option>';
+        config.cortadores.forEach(c => {
+            selectCortador.innerHTML += `<option value="${c}">${c}</option>`;
         });
     }
 
-    if (typeof listasGlobales !== 'undefined') {
-        const llenarSelect = (id, items) => {
-            const sel = document.getElementById(id);
-            if (!sel) return;
-            sel.innerHTML = `<option value="">-- Seleccione --</option>`;
-            (items || []).forEach(item => {
-                const opt = document.createElement('option');
-                opt.value = item;
-                opt.textContent = item;
-                sel.appendChild(opt);
-            });
-        };
-        llenarSelect('sc-bloque', listasGlobales.bloques);
-        llenarSelect('sc-variedad', listasGlobales.variedades);
+    if (selectBloque && config.bloques) {
+        selectBloque.innerHTML = '<option value="">-- Seleccione Bloque --</option>';
+        config.bloques.forEach(b => {
+            selectBloque.innerHTML += `<option value="${b}">${b}</option>`;
+        });
     }
-}
+
+    if (selectVariedad && config.variedades) {
+        selectVariedad.innerHTML = '<option value="">-- Seleccione Variedad --</option>';
+        config.variedades.forEach(v => {
+            selectVariedad.innerHTML += `<option value="${v}">${v}</option>`;
+        });
+    }
+};
 
 function calcularHorasTrabajadas(horaInicio, horaFin) {
     if (!horaInicio || !horaFin) return 0;

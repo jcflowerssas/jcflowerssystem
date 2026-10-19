@@ -6,38 +6,75 @@
     <title>Control Cuarto Frío & Producción - Tomates San Sebastián</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
 
-    <!-- FUNCIÓN DE NAVEGACIÓN GLOBAL EN EL HEAD PARA EVITAR ERRORES -->
+    <!-- FUNCIÓN DE NAVEGACIÓN GLOBAL EN EL HEAD -->
     <script>
-        function cambiarVista(vista) {
-            const vistas = ['vista-inventario', 'vista-salidas', 'vista-incompletos', 'vista-cortadores', 'vista-produccion'];
-            
-            // Ocultar todas las secciones
-            vistas.forEach(v => {
-                const el = document.getElementById(v);
-                if (el) {
-                    el.classList.add('hidden');
-                    el.style.display = 'none';
-                }
-            });
+    // PIN o Contraseña por defecto para acceder a Configuración (puedes cambiarlo)
+    const CLAVE_CONFIGURACION = "1234";
 
-            // Mostrar la sección activa
-            const vistaActiva = document.getElementById(`vista-${vista}`);
-            if (vistaActiva) {
-                vistaActiva.classList.remove('hidden');
-                vistaActiva.style.display = 'block';
+    function cambiarVista(vista) {
+        // Si intenta entrar a configuración, solicitar autenticación
+        if (vista === 'configuracion') {
+            const modalAuth = document.getElementById('modal-auth-config');
+            if (modalAuth) {
+                document.getElementById('input-pin-config').value = '';
+                document.getElementById('error-pin-config').classList.add('hidden');
+                modalAuth.classList.remove('hidden');
+                return; // Detener la navegación hasta que se autentique correctamente
             }
-
-            // Llamar a las funciones de renderizado correspondientes si existen
-            if (vista === 'inventario' && typeof cargarInventario === 'function') cargarInventario();
-            else if (vista === 'salidas' && typeof cargarSalidas === 'function') cargarSalidas();
-            else if (vista === 'incompletos' && typeof cargarIncompletos === 'function') cargarIncompletos();
-            else if (vista === 'cortadores' && typeof renderizarCortadores === 'function') renderizarCortadores();
-            else if (vista === 'produccion' && typeof renderizarGraficoProduccion === 'function') renderizarGraficoProduccion();
         }
 
-        window.cambiarVista = cambiarVista;
-        window.cambiarvista = cambiarVista;
+        navegarAVista(vista);
+    }
+
+    function navegarAVista(vista) {
+        const vistas = ['vista-inventario', 'vista-salidas', 'vista-incompletos', 'vista-cortadores', 'vista-produccion', 'vista-configuracion'];
+        
+        // Ocultar todas las secciones
+        vistas.forEach(v => {
+            const el = document.getElementById(v);
+            if (el) {
+                el.classList.add('hidden');
+                el.style.display = 'none';
+            }
+        });
+
+        // Mostrar la sección activa
+        const vistaActiva = document.getElementById(`vista-${vista}`);
+        if (vistaActiva) {
+            vistaActiva.classList.remove('hidden');
+            vistaActiva.style.display = 'block';
+        }
+
+        // Llamar a las funciones de renderizado correspondientes si existen
+        if (vista === 'inventario' && typeof cargarInventario === 'function') cargarInventario();
+        else if (vista === 'salidas' && typeof cargarSalidas === 'function') cargarSalidas();
+        else if (vista === 'incompletos' && typeof cargarIncompletos === 'function') cargarIncompletos();
+        else if (vista === 'cortadores' && typeof renderizarCortadores === 'function') renderizarCortadores();
+        else if (vista === 'produccion' && typeof renderizarGraficoProduccion === 'function') renderizarGraficoProduccion();
+        else if (vista === 'configuracion' && typeof cargarListasConfiguradas === 'function') cargarListasConfiguradas();
+    }
+
+    function verificarPinConfig(event) {
+        if (event) event.preventDefault();
+        const pinIngresado = document.getElementById('input-pin-config').value;
+        const errorPin = document.getElementById('error-pin-config');
+
+        // Verificar el PIN ingresado o la clave guardada en localStorage
+        const claveValida = localStorage.getItem('pin_configuracion') || CLAVE_CONFIGURACION;
+
+        if (pinIngresado === claveValida) {
+            document.getElementById('modal-auth-config').classList.add('hidden');
+            navegarAVista('configuracion');
+        } else {
+            errorPin.classList.remove('hidden');
+        }
+    }
+
+    window.cambiarVista = cambiarVista;
+    window.cambiarvista = cambiarVista;
+    window.verificarPinConfig = verificarPinConfig;
     </script>
 </head>
 <body class="bg-slate-100 min-h-screen text-slate-800 font-sans">
@@ -58,6 +95,7 @@
                 <button onclick="cambiarVista('incompletos')" class="px-4 py-2 bg-amber-700 hover:bg-amber-600 rounded-lg text-xs font-bold transition shadow">Tabacos Incompletos</button>
                 <button onclick="cambiarVista('cortadores')" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-600 rounded-lg text-xs font-bold transition shadow">Cortadores y Rendimiento</button>
                 <button onclick="cambiarVista('produccion')" class="px-4 py-2 bg-purple-700 hover:bg-purple-600 rounded-lg text-xs font-bold transition shadow">Producción por Bloque</button>
+                <button onclick="cambiarVista('configuracion')" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-xs font-bold transition shadow">⚙️ Configurar Listas</button>
             </nav>
         </div>
     </header>
@@ -259,8 +297,71 @@
             </div>
         </section>
 
+        <!-- SECCIÓN 6: CONFIGURAR LISTAS (AGREGAR / ELIMINAR ELEMENTOS) -->
+        <section id="vista-configuracion" class="hidden space-y-6" style="display: none;">
+            <div class="bg-slate-800 text-white p-4 rounded-2xl flex items-center justify-between">
+                <div>
+                    <h2 class="text-lg font-bold">Configuración de Listas del Sistema</h2>
+                    <p class="text-xs text-slate-300">Administra las opciones disponibles para ubicaciones, bloques, variedades, grados y cortadores.</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Tarjeta Ubicaciones -->
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                    <h3 class="font-bold text-slate-800 border-b pb-2">📍 Ubicaciones</h3>
+                    <form onsubmit="agregarItemConfig(event, 'ubicaciones')" class="flex gap-2">
+                        <input type="text" id="nuevo-ubicaciones" placeholder="Nueva ubicación..." required class="w-full border rounded-lg px-3 py-1.5 text-sm">
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm font-bold">+</button>
+                    </form>
+                    <ul id="lista-ubicaciones" class="divide-y divide-slate-100 max-h-48 overflow-y-auto text-sm"></ul>
+                </div>
+
+                <!-- Tarjeta Bloques -->
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                    <h3 class="font-bold text-slate-800 border-b pb-2">🟩 Bloques</h3>
+                    <form onsubmit="agregarItemConfig(event, 'bloques')" class="flex gap-2">
+                        <input type="text" id="nuevo-bloques" placeholder="Nuevo bloque..." required class="w-full border rounded-lg px-3 py-1.5 text-sm">
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm font-bold">+</button>
+                    </form>
+                    <ul id="lista-bloques" class="divide-y divide-slate-100 max-h-48 overflow-y-auto text-sm"></ul>
+                </div>
+
+                <!-- Tarjeta Variedades -->
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                    <h3 class="font-bold text-slate-800 border-b pb-2">🌹 Variedades</h3>
+                    <form onsubmit="agregarItemConfig(event, 'variedades')" class="flex gap-2">
+                        <input type="text" id="nuevo-variedades" placeholder="Nueva variedad..." required class="w-full border rounded-lg px-3 py-1.5 text-sm">
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm font-bold">+</button>
+                    </form>
+                    <ul id="lista-variedades" class="divide-y divide-slate-100 max-h-48 overflow-y-auto text-sm"></ul>
+                </div>
+
+                <!-- Tarjeta Grados -->
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                    <h3 class="font-bold text-slate-800 border-b pb-2">📏 Grados</h3>
+                    <form onsubmit="agregarItemConfig(event, 'grados')" class="flex gap-2">
+                        <input type="text" id="nuevo-grados" placeholder="Nuevo grado..." required class="w-full border rounded-lg px-3 py-1.5 text-sm">
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm font-bold">+</button>
+                    </form>
+                    <ul id="lista-grados" class="divide-y divide-slate-100 max-h-48 overflow-y-auto text-sm"></ul>
+                </div>
+
+                <!-- Tarjeta Cortadores -->
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                    <h3 class="font-bold text-slate-800 border-b pb-2">✂️ Cortadores</h3>
+                    <form onsubmit="agregarItemConfig(event, 'cortadores')" class="flex gap-2">
+                        <input type="text" id="nuevo-cortadores" placeholder="Nuevo cortador..." required class="w-full border rounded-lg px-3 py-1.5 text-sm">
+                        <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm font-bold">+</button>
+                    </form>
+                    <ul id="lista-cortadores" class="divide-y divide-slate-100 max-h-48 overflow-y-auto text-sm"></ul>
+                </div>
+            </div>
+        </section>
+
     </main>
 
+    <!-- MODALES DE ENTRADA, SALIDA Y CORTADOR (MANTENIDOS ÍNTEGROS) -->
     <!-- MODAL REGISTRAR ENTRADA -->
     <div id="modal-entrada" class="hidden fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4">
         <div class="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl space-y-4">
@@ -438,6 +539,29 @@
                 <div class="flex justify-end gap-2 pt-3">
                     <button type="button" onclick="cerrarModal('modal-cortador')" class="px-4 py-2 bg-gray-200 rounded-lg text-sm font-bold">Cancelar</button>
                     <button type="submit" class="px-4 py-2 bg-emerald-700 text-white rounded-lg text-sm font-bold hover:bg-emerald-800">Guardar Corte</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL DE AUTENTICACIÓN PARA CONFIGURACIÓN -->
+    <div id="modal-auth-config" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4 border border-slate-200">
+            <div class="text-center">
+                <span class="text-3xl">🔒</span>
+                <h3 class="font-bold text-lg text-slate-800 mt-2">Acceso Restringido</h3>
+                <p class="text-xs text-slate-500 mt-1">Ingresa el PIN de autorización para administrar las listas.</p>
+            </div>
+            
+            <form onsubmit="verificarPinConfig(event)" class="space-y-3">
+                <div>
+                    <input type="password" id="input-pin-config" placeholder="Contraseña o PIN (Ej: 1234)" required autocomplete="off" class="w-full text-center border border-slate-300 rounded-xl px-3 py-2.5 text-lg font-bold tracking-widest focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <p id="error-pin-config" class="hidden text-xs text-rose-600 font-bold text-center mt-2">⚠️ PIN incorrecto. Inténtalo de nuevo.</p>
+                </div>
+                
+                <div class="flex gap-2 pt-2">
+                    <button type="button" onclick="document.getElementById('modal-auth-config').classList.add('hidden')" class="w-1/2 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-sm transition">Cancelar</button>
+                    <button type="submit" class="w-1/2 py-2 bg-indigo-900 hover:bg-indigo-800 text-white font-bold rounded-xl text-sm shadow transition">Ingresar</button>
                 </div>
             </form>
         </div>
