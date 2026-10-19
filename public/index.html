@@ -478,7 +478,7 @@
         </div>
     </div>
 
-    <!-- MODAL REGISTRAR CORTE / RENDIMIENTO CORTADOR (SELECCIÓN MÚLTIPLE) -->
+    <!-- MODAL REGISTRAR CORTE Y RENDIMIENTO -->
     <div id="modal-cortador" class="hidden fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4">
         <div class="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl space-y-4">
             <div class="flex justify-between items-center border-b pb-3">
@@ -497,21 +497,22 @@
                     </select>
                 </div>
 
-                <!-- SELECCIÓN MÚLTIPLE DE BLOQUES -->
+                <!-- BLOQUES -->
                 <div>
                     <label class="block text-xs font-bold text-slate-600 mb-1">Bloque(s) <span class="text-emerald-700 text-[10px]">(Puede elegir varios)</span></label>
-                    <div id="sc-bloques-contenedor" class="border rounded-lg p-2 max-h-32 overflow-y-auto bg-slate-50 space-y-1 text-sm border-slate-300">
-                     <p class="text-xs text-gray-400 italic">Cargando bloques...</p>
+                    <div id="sc-bloques-contenedor" class="border rounded-lg p-2 max-h-28 overflow-y-auto bg-slate-50 space-y-1 text-sm border-slate-300">
+                        <p class="text-xs text-gray-400 italic">Cargando bloques...</p>
                     </div>
                 </div>
 
-                <!-- SELECCIÓN MÚLTIPLE DE VARIEDADES -->
+                <!-- VARIEDADES -->
                 <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1">Variedad(es) <span class="text-emerald-700 text-[10px]">(Puede elegir varias)</span></label>
-                        <div id="sc-variedades-contenedor" class="border rounded-lg p-2 max-h-32 overflow-y-auto bg-slate-50 space-y-1 text-sm border-slate-300">
-                         <p class="text-xs text-gray-400 italic">Cargando variedades...</p>
-                        </div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Variedad(es) <span class="text-emerald-700 text-[10px]">(Puede elegir varias)</span></label>
+                    <div id="sc-variedades-contenedor" class="border rounded-lg p-2 max-h-28 overflow-y-auto bg-slate-50 space-y-1 text-sm border-slate-300">
+                        <p class="text-xs text-gray-400 italic">Cargando variedades...</p>
                     </div>
+                </div>
+
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="block text-xs font-bold text-slate-600 mb-1">Hora Inicio</label>
@@ -522,9 +523,11 @@
                         <input type="time" id="sc-hora-fin" required class="w-full border rounded-lg px-3 py-2 text-sm">
                     </div>
                 </div>
+
+                <!-- TOTAL DE TABACOS Y TALLOS -->
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1">Cantidad Tabacos</label>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Total Tabacos Cortados</label>
                         <input type="number" id="sc-tabacos" placeholder="0" required class="w-full border rounded-lg px-3 py-2 text-sm">
                     </div>
                     <div>
@@ -536,10 +539,12 @@
                         </select>
                     </div>
                 </div>
+
                 <div>
-                    <label class="block text-xs font-bold text-slate-600 mb-1">Tallos Directos / Sueltos (Opcional)</label>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Tallos Sueltos / Directos (Opcional)</label>
                     <input type="number" id="sc-tallos-directos" placeholder="0" class="w-full border rounded-lg px-3 py-2 text-sm">
                 </div>
+
                 <div class="flex justify-end gap-2 pt-3">
                     <button type="button" onclick="cerrarModal('modal-cortador')" class="px-4 py-2 bg-gray-200 rounded-lg text-sm font-bold">Cancelar</button>
                     <button type="submit" class="px-4 py-2 bg-emerald-700 text-white rounded-lg text-sm font-bold hover:bg-emerald-800">Guardar Corte</button>
