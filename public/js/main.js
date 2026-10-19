@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Establecer fecha actual por defecto en los campos de fecha
     const hoy = new Date().toISOString().split('T')[0];
     ['input-fecha-ingreso', 'inc-fecha', 'sc-fecha', 'salida-fecha'].forEach(id => {
         const el = document.getElementById(id);
@@ -10,50 +9,46 @@ document.addEventListener('DOMContentLoaded', () => {
         cargarListasConfiguradas();
     }
     
-    cambiarVista('inventario');
+    // Iniciar mostrando la vista principal por defecto
+    if (typeof window.cambiarVista === 'function') {
+        window.cambiarVista('inventario');
+    }
 });
 
-function cambiarVista(vista) {
-    const vistas = ['vista-inventario', 'vista-salidas', 'vista-incompletos', 'vista-cortadores', 'vista-produccion'];
-    vistas.forEach(v => {
-        const el = document.getElementById(v);
-        if (el) el.classList.add('hidden');
-    });
-
-    const vistaActiva = document.getElementById(`vista-${vista}`);
-    if (vistaActiva) {
-        vistaActiva.classList.remove('hidden');
-    }
-
-    if (vista === 'inventario' && typeof cargarInventario === 'function') {
-        cargarInventario();
-    } else if (vista === 'salidas' && typeof cargarSalidas === 'function') {
-        cargarSalidas();
-    } else if (vista === 'incompletos' && typeof cargarIncompletos === 'function') {
-        cargarIncompletos();
-    } else if (vista === 'cortadores' && typeof renderizarCortadores === 'function') {
-        renderizarCortadores();
-    } else if (vista === 'produccion' && typeof renderizarGraficoProduccion === 'function') {
-        renderizarGraficoProduccion();
-    }
-}
-
-function abrirModalEntrada() {
+// Funciones globales para modales
+window.abrirModalEntrada = function() {
     const m = document.getElementById('modal-entrada');
-    if (m) m.classList.remove('hidden');
-}
+    if (m) {
+        m.classList.remove('hidden');
+        document.getElementById('input-fecha-ingreso').value = new Date().toISOString().split('T')[0];
+        if (typeof poblarSelectsEntrada === 'function') poblarSelectsEntrada();
+    }
+};
 
-function abrirModalIncompleto() {
+window.abrirModalSalida = function() {
+    const m = document.getElementById('modal-salida');
+    if (m) {
+        m.classList.remove('hidden');
+        document.getElementById('salida-fecha').value = new Date().toISOString().split('T')[0];
+        if (typeof poblarSelectsSalidas === 'function') poblarSelectsSalidas();
+    }
+};
+
+window.abrirModalIncompleto = function() {
     const m = document.getElementById('modal-incompleto');
     if (m) m.classList.remove('hidden');
-}
+};
 
-function abrirModalCortador() {
+window.abrirModalCortador = function() {
     const m = document.getElementById('modal-cortador');
-    if (m) m.classList.remove('hidden');
-}
+    if (m) {
+        m.classList.remove('hidden');
+        document.getElementById('sc-fecha').value = new Date().toISOString().split('T')[0];
+        if (typeof poblarSelectsCortador === 'function') poblarSelectsCortador();
+    }
+};
 
-function cerrarModal(id) {
+window.cerrarModal = function(id) {
     const m = document.getElementById(id);
     if (m) m.classList.add('hidden');
-}
+};
