@@ -1,5 +1,6 @@
 let cortesGlobal = [];
 let listaCortadoresGlobal = [];
+let chartCortadores = null;
 
 document.addEventListener('DOMContentLoaded', () => {
     cargarCortadores();
@@ -21,53 +22,13 @@ async function cargarCortes() {
         if (res.ok) {
             cortesGlobal = await res.json();
         } else {
-            // Respaldo desde localStorage si no hay respuesta del backend
             cortesGlobal = JSON.parse(localStorage.getItem('app_cortes') || '[]');
         }
-        renderizarCortadores();
     } catch (err) {
-        console.error('Error al cargar cortes desde API, leyendo localStorage:', err);
         cortesGlobal = JSON.parse(localStorage.getItem('app_cortes') || '[]');
-        renderizarCortadores();
     }
+    renderizarCortadores();
 }
-
-window.poblarSelectsCortador = function() {
-    if (typeof actualizarTodosLosSelects === 'function') {
-        actualizarTodosLosSelects();
-        return;
-    }
-
-    const selectCortador = document.getElementById('sc-cortador');
-    const selectBloque = document.getElementById('sc-bloque');
-    const selectVariedad = document.getElementById('sc-variedad');
-
-    const configGuardada = localStorage.getItem('app_configuracion_listas');
-    if (!configGuardada) return;
-
-    const config = JSON.parse(configGuardada);
-
-    if (selectCortador && config.cortadores) {
-        selectCortador.innerHTML = '<option value="">-- Seleccione Cortador --</option>';
-        config.cortadores.forEach(c => {
-            selectCortador.innerHTML += `<option value="${c}">${c}</option>`;
-        });
-    }
-
-    if (selectBloque && config.bloques) {
-        selectBloque.innerHTML = '<option value="">-- Seleccione Bloque --</option>';
-        config.bloques.forEach(b => {
-            selectBloque.innerHTML += `<option value="${b}">${b}</option>`;
-        });
-    }
-
-    if (selectVariedad && config.variedades) {
-        selectVariedad.innerHTML = '<option value="">-- Seleccione Variedad --</option>';
-        config.variedades.forEach(v => {
-            selectVariedad.innerHTML += `<option value="${v}">${v}</option>`;
-        });
-    }
-};
 
 function calcularHorasTrabajadas(horaInicio, horaFin) {
     if (!horaInicio || !horaFin) return 0;
@@ -84,20 +45,48 @@ window.renderizarCortadores = function() {
     if (!tbody) return;
     tbody.innerHTML = '';
 
-    // Si cortesGlobal está vacío, intentar cargar desde localStorage por respaldo
     if (!cortesGlobal || cortesGlobal.length === 0) {
         cortesGlobal = JSON.parse(localStorage.getItem('app_cortes') || '[]');
     }
 
-    if (cortesGlobal.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-gray-400">No hay registros de cortes.</td></tr>`;
-        renderizarGraficoCortadores();
+    poblarFiltroCortadoresSelect();
+
+    // Obtener filtros
+    const rango = document.getElementById('filtro-rango-tiempo')?.value || 'semana';
+    const cortadorFiltro = document.getElementById('filtro-cortador-grafico')?.value || 'todos';
+
+    // Filtrar por Rango Temporal
+    const hoy = new Date();
+    const cortesFiltrados = cortesGlobal.filter(c => {
+        if (!c.fecha) return true;
+        const fechaCorte = new Date(c.fecha + 'T00:00:00');
+
+        if (cortadorFiltro !== 'todos' && c.cortador !== cortadorFiltro) {
+            return false;
+        }
+
+        if (rango === 'hoy') {
+            return fechaCorte.toDateString() === hoy.toDateString();
+        } else if (rango === 'semana') {
+            const haceSieteDias = new Date();
+            haceSieteDias.setDate(hoy.getDate() - 7);
+            return fechaCorte >= haceSieteDias;
+        } else if (rango === 'mes') {
+            return fechaCorte.getMonth() === hoy.getMonth() && fechaCorte.getFullYear() === hoy.getFullYear();
+        }
+        return true;
+    });
+
+    if (cortesFiltrados.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-gray-400 italic">No hay registros para los filtros seleccionados.</td></tr>`;
+        renderizarGraficoDispersion([]);
+        renderizarRankingCortadores([]);
         return;
     }
 
-    cortesGlobal.forEach(item => {
+    cortesFiltrados.forEach(item => {
         const horas = calcularHorasTrabajadas(item.horaInicio, item.horaFin);
-        const totalTallos = Number(item.totalTallos) || ((Number(item.tabacos || 0) * Number(item.tallosPorTabaco || 0)) + Number(item.tallosDirectos || 0));
+        const totalTallos = Number(item.totalTallos) || Number(item.tallosDirectos) || 0;
         const promedioHora = horas > 0 ? Math.round(totalTallos / horas) : totalTallos;
 
         const tr = document.createElement('tr');
@@ -117,9 +106,25 @@ window.renderizarCortadores = function() {
         tbody.appendChild(tr);
     });
 
-    renderizarGraficoCortadores();
+    renderizarGraficoDispersion(cortesFiltrados);
+    renderizarRankingCortadores(cortesFiltrados);
 };
 
+// Poblar filtro desplegable de cortadores
+function poblarFiltroCortadoresSelect() {
+    const select = document.getElementById('filtro-cortador-grafico');
+    if (!select) return;
+    const valorActual = select.value;
+
+    const cortadoresUnicos = [...new Set(cortesGlobal.map(c => c.cortador))].filter(Boolean);
+    select.innerHTML = '<option value="todos">Todos los Cortadores</option>';
+    cortadoresUnicos.forEach(c => {
+        select.innerHTML += `<option value="${c}">${c}</option>`;
+    });
+    if (valorActual) select.value = valorActual;
+}
+
+// Guardar nuevo registro simplificado
 window.guardarCorte = async function(event) {
     if (event) event.preventDefault();
 
@@ -127,20 +132,16 @@ window.guardarCorte = async function(event) {
     const cortador = document.getElementById('sc-cortador').value;
     const horaInicio = document.getElementById('sc-hora-inicio').value;
     const horaFin = document.getElementById('sc-hora-fin').value;
-    const tabacos = parseInt(document.getElementById('sc-tabacos').value) || 0;
-    const tallosPorTabaco = parseInt(document.getElementById('sc-tallos-tabaco').value) || 0;
-    const tallosDirectos = parseInt(document.getElementById('sc-tallos-directos').value) || 0;
+    const totalTallos = parseInt(document.getElementById('sc-tallos-directos').value) || 0;
 
     if (!cortador) {
         alert('Por favor seleccione un cortador.');
         return;
     }
 
-    // Recolectar múltiples bloques seleccionados
     const bloquesSeleccionados = Array.from(document.querySelectorAll('input[name="sc-bloque-check"]:checked'))
         .map(cb => cb.value);
 
-    // Recolectar múltiples variedades seleccionadas
     const variedadesSeleccionadas = Array.from(document.querySelectorAll('input[name="sc-variedad-check"]:checked'))
         .map(cb => cb.value);
 
@@ -154,30 +155,23 @@ window.guardarCorte = async function(event) {
         return;
     }
 
-    const bloqueTexto = bloquesSeleccionados.join(', ');
-    const variedadTexto = variedadesSeleccionadas.join(', ');
-
     const horas = calcularHorasTrabajadas(horaInicio, horaFin);
-    const totalTallos = (tabacos * tallosPorTabaco) + tallosDirectos;
     const promedioHora = horas > 0 ? Math.round(totalTallos / horas) : totalTallos;
 
     const nuevoRegistro = {
         id: Date.now().toString(),
         fecha,
         cortador,
-        bloque: bloqueTexto,
-        variedad: variedadTexto,
+        bloque: bloquesSeleccionados.join(', '),
+        variedad: variedadesSeleccionadas.join(', '),
         horaInicio,
         horaFin,
         horas: horas.toFixed(2),
-        tabacos,
-        tallosPorTabaco,
-        tallosDirectos,
-        totalTallos,
+        tallosDirectos: totalTallos,
+        totalTallos: totalTallos,
         promedioHora
     };
 
-    // 1. Guardar en servidor mediante API
     try {
         await fetch('/api/cortes', {
             method: 'POST',
@@ -185,14 +179,12 @@ window.guardarCorte = async function(event) {
             body: JSON.stringify(nuevoRegistro)
         });
     } catch (err) {
-        console.warn('API no disponible para POST /api/cortes, guardando en local:', err);
+        console.warn('API no disponible para POST /api/cortes, guardando localmente:', err);
     }
 
-    // 2. Guardar en memoria local y localStorage
     cortesGlobal.unshift(nuevoRegistro);
     localStorage.setItem('app_cortes', JSON.stringify(cortesGlobal));
 
-    // 3. Resetear formulario, cerrar modal y refrescar la tabla
     document.getElementById('form-cortador').reset();
     if (typeof cerrarModal === 'function') cerrarModal('modal-cortador');
     renderizarCortadores();
@@ -212,47 +204,114 @@ window.eliminarCorte = async function(id) {
     renderizarCortadores();
 };
 
-let chartCortadores = null;
-function renderizarGraficoCortadores() {
+// GRÁFICO DE DISPERSIÓN (PUNTOS DE RENDIMIENTO COMPARATIVOS)
+function renderizarGraficoDispersion(cortes) {
     const canvas = document.getElementById('graficoComparacionCortadores');
     if (!canvas) return;
 
-    const resumen = {};
-    cortesGlobal.forEach(c => {
+    if (chartCortadores) chartCortadores.destroy();
+
+    if (!cortes || cortes.length === 0) return;
+
+    // Colores aleatorios por cortador
+    const colores = ['#10b981', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#f97316'];
+    const mapaCortadores = {};
+
+    cortes.forEach(c => {
         const horas = calcularHorasTrabajadas(c.horaInicio, c.horaFin);
-        const tallos = Number(c.totalTallos) || ((Number(c.tabacos || 0) * Number(c.tallosPorTabaco || 0)) + Number(c.tallosDirectos || 0));
+        const tallos = Number(c.totalTallos) || 0;
+        const promedio = horas > 0 ? Math.round(tallos / horas) : tallos;
+
+        if (!mapaCortadores[c.cortador]) {
+            mapaCortadores[c.cortador] = [];
+        }
+        mapaCortadores[c.cortador].push({
+            x: c.fecha,
+            y: promedio
+        });
+    });
+
+    const datasets = Object.keys(mapaCortadores).map((nombre, i) => ({
+        label: nombre,
+        data: mapaCortadores[nombre],
+        backgroundColor: colores[i % colores.length],
+        borderColor: colores[i % colores.length],
+        pointRadius: 6,
+        pointHoverRadius: 9
+    }));
+
+    chartCortadores = new Chart(canvas, {
+        type: 'scatter',
+        data: { datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: (ctx) => `${ctx.dataset.label}: ${ctx.raw.y} tallos/hr (${ctx.raw.x})`
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    type: 'category',
+                    title: { display: true, text: 'Fecha del Corte' }
+                },
+                y: {
+                    beginAtZero: true,
+                    title: { display: true, text: 'Tallos / Hora' }
+                }
+            }
+        }
+    });
+}
+
+// GENERAR RANKING DE MAYOR A MENOR RENDIMIENTO
+function renderizarRankingCortadores(cortes) {
+    const contenedor = document.getElementById('contenedor-ranking-cortadores');
+    if (!contenedor) return;
+    contenedor.innerHTML = '';
+
+    if (!cortes || cortes.length === 0) {
+        contenedor.innerHTML = '<p class="text-xs text-gray-400 italic py-2">Sin datos para el periodo seleccionado.</p>';
+        return;
+    }
+
+    // Calcular promedio acumulado por cortador
+    const resumen = {};
+    cortes.forEach(c => {
+        const horas = calcularHorasTrabajadas(c.horaInicio, c.horaFin);
+        const tallos = Number(c.totalTallos) || 0;
         if (!resumen[c.cortador]) resumen[c.cortador] = { tallos: 0, horas: 0 };
         resumen[c.cortador].tallos += tallos;
         resumen[c.cortador].horas += horas;
     });
 
-    const labels = Object.keys(resumen);
-    const data = labels.map(k => {
-        const h = resumen[k].horas;
-        return h > 0 ? Math.round(resumen[k].tallos / h) : resumen[k].tallos;
-    });
+    const ranking = Object.keys(resumen).map(nombre => {
+        const h = resumen[nombre].horas;
+        const promedio = h > 0 ? Math.round(resumen[nombre].tallos / h) : resumen[nombre].tallos;
+        return { nombre, promedio, totalTallos: resumen[nombre].tallos };
+    }).sort((a, b) => b.promedio - a.promedio);
 
-    if (chartCortadores) chartCortadores.destroy();
+    ranking.forEach((item, index) => {
+        const medallas = ['🥇', '🥈', '🥉'];
+        const icono = medallas[index] || `#${index + 1}`;
 
-    chartCortadores = new Chart(canvas, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: 'Promedio Tallos / Hora',
-                data: data,
-                backgroundColor: 'rgba(16, 185, 129, 0.7)',
-                borderColor: 'rgb(16, 185, 129)',
-                borderWidth: 1,
-                borderRadius: 8
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: { beginAtZero: true }
-            }
-        }
+        const div = document.createElement('div');
+        div.className = 'py-2.5 flex items-center justify-between text-sm';
+        div.innerHTML = `
+            <div class="flex items-center gap-2">
+                <span class="font-bold text-base">${icono}</span>
+                <div>
+                    <p class="font-bold text-slate-800 leading-tight">${item.nombre}</p>
+                    <p class="text-[11px] text-gray-500">${item.totalTallos.toLocaleString()} tallos acumulados</p>
+                </div>
+            </div>
+            <span class="font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg text-xs">
+                ${item.promedio.toLocaleString()} t/h
+            </span>
+        `;
+        contenedor.appendChild(div);
     });
 }

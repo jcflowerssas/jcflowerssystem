@@ -264,10 +264,49 @@
                 </div>
                 <button onclick="abrirModalCortador()" class="px-4 py-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold rounded-lg text-sm shadow">+ Registrar Corte</button>
             </div>
-            <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
-                <h3 class="font-bold text-slate-800">Gráfico de Comparación de Rendimiento</h3>
-                <div class="h-72"><canvas id="graficoComparacionCortadores"></canvas></div>
+
+            <!-- PANEL DE FILTROS PARA EL GRÁFICO Y RANKING -->
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap items-center justify-between gap-4">
+                <div class="flex flex-wrap items-center gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Rango Temporal</label>
+                        <select id="filtro-rango-tiempo" onchange="renderizarCortadores()" class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm bg-white font-semibold">
+                            <option value="hoy">Hoy</option>
+                            <option value="semana" selected>Esta Semana</option>
+                            <option value="mes">Este Mes</option>
+                            <option value="todos">Todo el Histórico</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Filtrar Cortador(es)</label>
+                        <select id="filtro-cortador-grafico" onchange="renderizarCortadores()" class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm bg-white font-semibold">
+                            <option value="todos">Todos los Cortadores</option>
+                        </select>
+                    </div>
+                </div>
             </div>
+
+            <!-- GRÁFICO DE DISPERSIÓN / TENDENCIA Y RANKING -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-3">
+                    <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                        <span>📊</span> Comportamiento de Rendimiento (Tallos / Hora)
+                    </h3>
+                    <div class="h-72"><canvas id="graficoComparacionCortadores"></canvas></div>
+                </div>
+
+                <!-- SECCIÓN DE RANKING -->
+                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-3">
+                    <h3 class="font-bold text-slate-800 text-sm flex items-center gap-2">
+                        <span>🏆</span> Ranking de Eficiencia en el Periodo
+                    </h3>
+                    <div class="overflow-y-auto max-h-64 divide-y divide-slate-100" id="contenedor-ranking-cortadores">
+                        <p class="text-xs text-gray-400 italic py-2">Sin datos para el periodo seleccionado.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TABLA DE REGISTROS -->
             <div class="bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-200">
                 <div class="overflow-x-auto">
                     <table class="w-full text-left border-collapse">
@@ -288,6 +327,66 @@
                 </div>
             </div>
         </section>
+
+    <!-- MODAL REGISTRAR CORTE Y RENDIMIENTO (SIMPLIFICADO SIN TABACOS) -->
+    <div id="modal-cortador" class="hidden fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="font-bold text-lg text-emerald-900">Registrar Corte y Rendimiento</h3>
+                <button type="button" onclick="cerrarModal('modal-cortador')" class="text-gray-400 hover:text-gray-600 font-bold">✕</button>
+            </div>
+            <form id="form-cortador" onsubmit="guardarCorte(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Fecha</label>
+                    <input type="date" id="sc-fecha" required class="w-full border rounded-lg px-3 py-2 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Cortador</label>
+                    <select id="sc-cortador" required class="w-full border rounded-lg px-3 py-2 text-sm bg-white">
+                        <option value="">-- Seleccione Cortador --</option>
+                    </select>
+                </div>
+
+                <!-- BLOQUES -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Bloque(s) <span class="text-emerald-700 text-[10px]">(Puede elegir varios)</span></label>
+                    <div id="sc-bloques-contenedor" class="border rounded-lg p-2 max-h-28 overflow-y-auto bg-slate-50 space-y-1 text-sm border-slate-300">
+                        <p class="text-xs text-gray-400 italic">Cargando bloques...</p>
+                    </div>
+                </div>
+
+                <!-- VARIEDADES -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Variedad(es) <span class="text-emerald-700 text-[10px]">(Puede elegir varias)</span></label>
+                    <div id="sc-variedades-contenedor" class="border rounded-lg p-2 max-h-28 overflow-y-auto bg-slate-50 space-y-1 text-sm border-slate-300">
+                        <p class="text-xs text-gray-400 italic">Cargando variedades...</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Hora Inicio</label>
+                        <input type="time" id="sc-hora-inicio" required class="w-full border rounded-lg px-3 py-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Hora Fin</label>
+                        <input type="time" id="sc-hora-fin" required class="w-full border rounded-lg px-3 py-2 text-sm">
+                    </div>
+                </div>
+
+                <!-- TOTAL TALLOS DIRECTO -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Total Tallos Cortados</label>
+                    <input type="number" id="sc-tallos-directos" placeholder="Ej: 450" required class="w-full border rounded-lg px-3 py-2 text-sm font-bold text-emerald-900">
+                </div>
+
+                <div class="flex justify-end gap-2 pt-3">
+                    <button type="button" onclick="cerrarModal('modal-cortador')" class="px-4 py-2 bg-gray-200 rounded-lg text-sm font-bold">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-emerald-700 text-white rounded-lg text-sm font-bold hover:bg-emerald-800">Guardar Corte</button>
+                </div>
+            </form>
+        </div>
+    </div>
 
         <!-- SECCIÓN 5: PRODUCCIÓN POR BLOQUE -->
         <section id="vista-produccion" class="hidden space-y-6" style="display: none;">
