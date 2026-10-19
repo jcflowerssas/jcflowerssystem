@@ -75,6 +75,16 @@ function calcularHorasTrabajadas(horaInicio, horaFin) {
     return dif > 0 ? dif : 0;
 }
 
+// Función auxiliar para obtener siempre el promedio correcto
+function obtenerPromedioHoraDelCorte(item) {
+    if (item.promedioHora && Number(item.promedioHora) > 0) {
+        return Number(item.promedioHora);
+    }
+    const horas = calcularHorasTrabajadas(item.horaInicio, item.horaFin);
+    const totalTallos = Number(item.totalTallos) || Number(item.tallosDirectos) || 0;
+    return horas > 0 ? Math.round(totalTallos / horas) : totalTallos;
+}
+
 window.renderizarCortadores = function() {
     const tbody = document.getElementById('tabla-cortadores-body');
     if (!tbody) return;
@@ -92,7 +102,6 @@ window.renderizarCortadores = function() {
 
     const hoy = new Date();
 
-    // Filtrar los registros de cortes según el periodo y número de semana
     const cortesFiltrados = cortesGlobal.filter(c => {
         if (!c.fecha) return true;
 
@@ -123,7 +132,7 @@ window.renderizarCortadores = function() {
     cortesFiltrados.forEach(item => {
         const horas = calcularHorasTrabajadas(item.horaInicio, item.horaFin);
         const totalTallos = Number(item.totalTallos) || Number(item.tallosDirectos) || 0;
-        const promedioHora = horas > 0 ? Math.round(totalTallos / horas) : totalTallos;
+        const promedioHora = obtenerPromedioHoraDelCorte(item);
         const semanaCorte = obtenerNumeroSemana(item.fecha);
 
         const tr = document.createElement('tr');
@@ -239,7 +248,7 @@ window.eliminarCorte = async function(id) {
     renderizarCortadores();
 };
 
-// GRÁFICO DE DISPERSIÓN
+// GRÁFICO DE DISPERSIÓN (USA EXACTAMENTE EL VALOR DE PROMEDIO / HORA)
 function renderizarGraficoDispersion(cortes) {
     const canvas = document.getElementById('graficoComparacionCortadores');
     if (!canvas) return;
@@ -252,9 +261,7 @@ function renderizarGraficoDispersion(cortes) {
     const mapaCortadores = {};
 
     cortes.forEach(c => {
-        const horas = calcularHorasTrabajadas(c.horaInicio, c.horaFin);
-        const tallos = Number(c.totalTallos) || 0;
-        const promedio = horas > 0 ? Math.round(tallos / horas) : tallos;
+        const promedio = obtenerPromedioHoraDelCorte(c);
 
         if (!mapaCortadores[c.cortador]) {
             mapaCortadores[c.cortador] = [];
@@ -301,7 +308,7 @@ function renderizarGraficoDispersion(cortes) {
     });
 }
 
-// RANKING DE RENDIMIENTO POR PERIODO / SEMANA
+// RANKING DE RENDIMIENTO (USA EXACTAMENTE EL TOTAL DE TALLOS Y HORAS REGISTRADAS)
 function renderizarRankingCortadores(cortes) {
     const contenedor = document.getElementById('contenedor-ranking-cortadores');
     if (!contenedor) return;
@@ -315,7 +322,7 @@ function renderizarRankingCortadores(cortes) {
     const resumen = {};
     cortes.forEach(c => {
         const horas = calcularHorasTrabajadas(c.horaInicio, c.horaFin);
-        const tallos = Number(c.totalTallos) || 0;
+        const tallos = Number(c.totalTallos) || Number(c.tallosDirectos) || 0;
         if (!resumen[c.cortador]) resumen[c.cortador] = { tallos: 0, horas: 0 };
         resumen[c.cortador].tallos += tallos;
         resumen[c.cortador].horas += horas;
