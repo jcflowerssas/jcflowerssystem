@@ -270,13 +270,23 @@
                 <div class="flex flex-wrap items-center gap-3">
                     <div>
                         <label class="block text-xs font-bold text-slate-600 mb-1">Rango Temporal</label>
-                        <select id="filtro-rango-tiempo" onchange="renderizarCortadores()" class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm bg-white font-semibold">
+                        <select id="filtro-rango-tiempo" onchange="toggleSelectorSemana(); renderizarCortadores();" class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm bg-white font-semibold">
+                            <option value="semana" selected>Por Semana (Semana del Año)</option>
                             <option value="hoy">Hoy</option>
-                            <option value="semana" selected>Esta Semana</option>
                             <option value="mes">Este Mes</option>
                             <option value="todos">Todo el Histórico</option>
                         </select>
                     </div>
+
+                    <!-- CAMPO DINÁMICO DE NÚMERO DE SEMANA -->
+                    <div id="contenedor-filtro-semana" class="flex flex-col">
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Número de Semana</label>
+                        <div class="flex items-center gap-1">
+                            <span class="text-xs font-bold text-slate-500">Semana</span>
+                            <input type="number" id="filtro-numero-semana" min="1" max="53" value="40" onchange="renderizarCortadores()" onkeyup="renderizarCortadores()" class="w-20 px-3 py-1.5 border border-slate-300 rounded-lg text-sm bg-white font-bold text-emerald-800 text-center">
+                        </div>
+                    </div>
+
                     <div>
                         <label class="block text-xs font-bold text-slate-600 mb-1">Filtrar Cortador(es)</label>
                         <select id="filtro-cortador-grafico" onchange="renderizarCortadores()" class="px-3 py-1.5 border border-slate-300 rounded-lg text-sm bg-white font-semibold">

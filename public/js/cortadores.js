@@ -5,7 +5,42 @@ let chartCortadores = null;
 document.addEventListener('DOMContentLoaded', () => {
     cargarCortadores();
     cargarCortes();
+    inicializarNumeroSemanaActual();
 });
+
+// Función para calcular el número de semana ISO del año
+function obtenerNumeroSemana(fechaStr) {
+    if (!fechaStr) return 0;
+    const fecha = new Date(fechaStr + 'T00:00:00');
+    const d = new Date(Date.UTC(fecha.getFullYear(), fecha.getMonth(), fecha.getDate()));
+    const dayNum = d.getUTCDay() || 7;
+    d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+    return Math.ceil((((d - yearStart) / 86400000) + 1) / 7);
+}
+
+// Establecer la semana actual por defecto en el input
+function inicializarNumeroSemanaActual() {
+    const hoyStr = new Date().toISOString().split('T')[0];
+    const semanaActual = obtenerNumeroSemana(hoyStr);
+    const inputSemana = document.getElementById('filtro-numero-semana');
+    if (inputSemana) {
+        inputSemana.value = semanaActual;
+    }
+}
+
+// Ocultar/Mostrar el selector de semana según la opción elegida
+window.toggleSelectorSemana = function() {
+    const rango = document.getElementById('filtro-rango-tiempo')?.value;
+    const contSemana = document.getElementById('contenedor-filtro-semana');
+    if (contSemana) {
+        if (rango === 'semana') {
+            contSemana.classList.remove('hidden');
+        } else {
+            contSemana.classList.add('hidden');
+        }
+    }
+};
 
 async function cargarCortadores() {
     try {
@@ -51,26 +86,27 @@ window.renderizarCortadores = function() {
 
     poblarFiltroCortadoresSelect();
 
-    // Obtener filtros
     const rango = document.getElementById('filtro-rango-tiempo')?.value || 'semana';
+    const numSemanaFiltro = parseInt(document.getElementById('filtro-numero-semana')?.value) || 0;
     const cortadorFiltro = document.getElementById('filtro-cortador-grafico')?.value || 'todos';
 
-    // Filtrar por Rango Temporal
     const hoy = new Date();
+
+    // Filtrar los registros de cortes según el periodo y número de semana
     const cortesFiltrados = cortesGlobal.filter(c => {
         if (!c.fecha) return true;
-        const fechaCorte = new Date(c.fecha + 'T00:00:00');
 
         if (cortadorFiltro !== 'todos' && c.cortador !== cortadorFiltro) {
             return false;
         }
 
-        if (rango === 'hoy') {
+        const fechaCorte = new Date(c.fecha + 'T00:00:00');
+
+        if (rango === 'semana') {
+            const semanaCorte = obtenerNumeroSemana(c.fecha);
+            return semanaCorte === numSemanaFiltro;
+        } else if (rango === 'hoy') {
             return fechaCorte.toDateString() === hoy.toDateString();
-        } else if (rango === 'semana') {
-            const haceSieteDias = new Date();
-            haceSieteDias.setDate(hoy.getDate() - 7);
-            return fechaCorte >= haceSieteDias;
         } else if (rango === 'mes') {
             return fechaCorte.getMonth() === hoy.getMonth() && fechaCorte.getFullYear() === hoy.getFullYear();
         }
@@ -78,7 +114,7 @@ window.renderizarCortadores = function() {
     });
 
     if (cortesFiltrados.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-gray-400 italic">No hay registros para los filtros seleccionados.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-gray-400 italic">No hay registros de cortes para la Semana ${numSemanaFiltro} o filtros seleccionados.</td></tr>`;
         renderizarGraficoDispersion([]);
         renderizarRankingCortadores([]);
         return;
@@ -88,11 +124,12 @@ window.renderizarCortadores = function() {
         const horas = calcularHorasTrabajadas(item.horaInicio, item.horaFin);
         const totalTallos = Number(item.totalTallos) || Number(item.tallosDirectos) || 0;
         const promedioHora = horas > 0 ? Math.round(totalTallos / horas) : totalTallos;
+        const semanaCorte = obtenerNumeroSemana(item.fecha);
 
         const tr = document.createElement('tr');
         tr.className = 'hover:bg-slate-50 border-b text-slate-700';
         tr.innerHTML = `
-            <td class="p-4 text-xs font-semibold">${item.fecha || ''}</td>
+            <td class="p-4 text-xs font-semibold">${item.fecha || ''} <span class="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-1.5 py-0.5 rounded">Sem ${semanaCorte}</span></td>
             <td class="p-4 font-bold text-emerald-900">${item.cortador || ''}</td>
             <td class="p-4">${item.bloque || ''}</td>
             <td class="p-4 font-medium">${item.variedad || ''}</td>
@@ -110,7 +147,6 @@ window.renderizarCortadores = function() {
     renderizarRankingCortadores(cortesFiltrados);
 };
 
-// Poblar filtro desplegable de cortadores
 function poblarFiltroCortadoresSelect() {
     const select = document.getElementById('filtro-cortador-grafico');
     if (!select) return;
@@ -124,7 +160,6 @@ function poblarFiltroCortadoresSelect() {
     if (valorActual) select.value = valorActual;
 }
 
-// Guardar nuevo registro simplificado
 window.guardarCorte = async function(event) {
     if (event) event.preventDefault();
 
@@ -179,7 +214,7 @@ window.guardarCorte = async function(event) {
             body: JSON.stringify(nuevoRegistro)
         });
     } catch (err) {
-        console.warn('API no disponible para POST /api/cortes, guardando localmente:', err);
+        console.warn('API no disponible para POST /api/cortes:', err);
     }
 
     cortesGlobal.unshift(nuevoRegistro);
@@ -204,7 +239,7 @@ window.eliminarCorte = async function(id) {
     renderizarCortadores();
 };
 
-// GRÁFICO DE DISPERSIÓN (PUNTOS DE RENDIMIENTO COMPARATIVOS)
+// GRÁFICO DE DISPERSIÓN
 function renderizarGraficoDispersion(cortes) {
     const canvas = document.getElementById('graficoComparacionCortadores');
     if (!canvas) return;
@@ -213,7 +248,6 @@ function renderizarGraficoDispersion(cortes) {
 
     if (!cortes || cortes.length === 0) return;
 
-    // Colores aleatorios por cortador
     const colores = ['#10b981', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#f97316'];
     const mapaCortadores = {};
 
@@ -267,18 +301,17 @@ function renderizarGraficoDispersion(cortes) {
     });
 }
 
-// GENERAR RANKING DE MAYOR A MENOR RENDIMIENTO
+// RANKING DE RENDIMIENTO POR PERIODO / SEMANA
 function renderizarRankingCortadores(cortes) {
     const contenedor = document.getElementById('contenedor-ranking-cortadores');
     if (!contenedor) return;
     contenedor.innerHTML = '';
 
     if (!cortes || cortes.length === 0) {
-        contenedor.innerHTML = '<p class="text-xs text-gray-400 italic py-2">Sin datos para el periodo seleccionado.</p>';
+        contenedor.innerHTML = '<p class="text-xs text-gray-400 italic py-2">Sin datos para la semana o periodo seleccionado.</p>';
         return;
     }
 
-    // Calcular promedio acumulado por cortador
     const resumen = {};
     cortes.forEach(c => {
         const horas = calcularHorasTrabajadas(c.horaInicio, c.horaFin);
