@@ -176,112 +176,48 @@ function renderizarSalidas() {
     });
 }
 
-// INVENTARIO PRINCIPAL (CÁLCULO NETO DE STOCK)
 window.cargarInventario = async function() {
     const tbody = document.getElementById('tabla-inventario-body');
 
+    // Cargar entradas registradas
     const entradas = window.entradasGlobal || JSON.parse(localStorage.getItem('app_entradas') || '[]');
-    const salidas = window.salidasGlobal || JSON.parse(localStorage.getItem('app_salidas') || '[]');
 
-    const mapaStock = {};
+    // 1. Actualizar la tabla de resumen superior
+    actualizarTablaResumen(entradas);
 
-    entradas.forEach(e => {
-        const u = normalizarTexto(e.ubicacion);
-        const b = normalizarTexto(e.bloque);
-        const vNorm = normalizarTexto(e.variedad);
-        const g = normalizarTexto(e.grado);
-
-        const clave = `${u}_${b}_${vNorm}_${g}`;
-
-        const tallos = Number(e.totalTallos) || (Number(e.tabacos || 0) * Number(e.tallosPorTabaco || 40)) || 0;
-        const tabacos = Number(e.tabacos || 0);
-
-        const esRojo = vNorm.includes('freedom') || (e.tipo && e.tipo.toLowerCase() === 'rojo');
-
-        if (!mapaStock[clave]) {
-            mapaStock[clave] = {
-                ubicacion: e.ubicacion || '-',
-                bloque: e.bloque || '-',
-                variedad: e.variedad || '-',
-                tipo: esRojo ? 'Rojo' : 'Color',
-                grado: e.grado || '-',
-                tallosPorTabaco: Number(e.tallosPorTabaco) || 40,
-                entradasTallos: 0,
-                salidasTallos: 0,
-                entradasTabacos: 0,
-                salidasTabacos: 0
-            };
-        }
-
-        mapaStock[clave].entradasTallos += tallos;
-        mapaStock[clave].entradasTabacos += tabacos;
-    });
-
-    salidas.forEach(s => {
-        const u = normalizarTexto(s.ubicacion);
-        const b = normalizarTexto(s.bloque);
-        const vNorm = normalizarTexto(s.variedad);
-        const g = normalizarTexto(s.grado);
-
-        const clave = `${u}_${b}_${vNorm}_${g}`;
-
-        const tallos = Number(s.totalTallos) || (Number(s.tabacos || 0) * Number(s.tallosPorTabaco || 40)) || 0;
-        const tabacos = Number(s.tabacos || 0);
-
-        if (!mapaStock[clave]) {
-            const esRojo = vNorm.includes('freedom') || (s.tipo && s.tipo.toLowerCase() === 'rojo');
-            mapaStock[clave] = {
-                ubicacion: s.ubicacion || '-',
-                bloque: s.bloque || '-',
-                variedad: s.variedad || '-',
-                tipo: esRojo ? 'Rojo' : 'Color',
-                grado: s.grado || '-',
-                tallosPorTabaco: Number(s.tallosPorTabaco) || 40,
-                entradasTallos: 0,
-                salidasTallos: 0,
-                entradasTabacos: 0,
-                salidasTabacos: 0
-            };
-        }
-
-        mapaStock[clave].salidasTallos += tallos;
-        mapaStock[clave].salidasTabacos += tabacos;
-    });
-
-    const items = Object.values(mapaStock);
-    actualizarTablaResumen(items);
-
+    // 2. Renderizar la tabla de registros individuales con botón Eliminar
     if (tbody) {
         tbody.innerHTML = '';
 
-        if (items.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="10" class="p-4 text-center text-gray-400 italic">No hay productos registrados en el inventario.</td></tr>`;
+        if (entradas.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="10" class="p-4 text-center text-gray-400 italic">No hay registros de entradas en el inventario.</td></tr>`;
             return;
         }
 
-        items.forEach(item => {
-            const tallosNetos = item.entradasTallos - item.salidasTallos;
-            const tabacosNetos = item.entradasTabacos - item.salidasTabacos;
+        entradas.forEach(item => {
+            const tallosTotales = Number(item.totalTallos) || (Number(item.tabacos || 0) * Number(item.tallosPorTabaco || 40)) || 0;
+            const esRojo = (item.variedad || '').toLowerCase().includes('freedom') || (item.tipo && item.tipo.toLowerCase() === 'rojo');
 
-            const badgeTipo = item.tipo === 'Rojo' 
+            const badgeTipo = esRojo 
                 ? '<span class="px-2 py-0.5 text-xs font-bold bg-rose-100 text-rose-700 rounded-full">Rojo</span>'
                 : '<span class="px-2 py-0.5 text-xs font-bold bg-amber-100 text-amber-700 rounded-full">Color</span>';
 
             const tr = document.createElement('tr');
             tr.className = 'border-b hover:bg-slate-50 text-sm text-slate-700';
             tr.innerHTML = `
-                <td class="p-3 font-medium">${item.ubicacion}</td>
-                <td class="p-3">${item.bloque}</td>
-                <td class="p-3 font-bold text-slate-800">${item.variedad}</td>
+                <td class="p-3 text-xs font-semibold text-slate-500">${item.fecha || '-'}</td>
+                <td class="p-3 font-medium">${item.ubicacion || '-'}</td>
+                <td class="p-3">${item.bloque || '-'}</td>
+                <td class="p-3 font-bold text-slate-800">${item.variedad || '-'}</td>
                 <td class="p-3">${badgeTipo}</td>
-                <td class="p-3">${item.grado}</td>
-                <td class="p-3">${tabacosNetos > 0 ? tabacosNetos : 0} tabacos</td>
-                <td class="p-3 text-xs text-gray-500">${item.tallosPorTabaco} c/u</td>
-                <td class="p-3 font-extrabold ${tallosNetos < 0 ? 'text-rose-600' : 'text-emerald-900'}">
-                    ${tallosNetos.toLocaleString()} tallos
-                </td>
+                <td class="p-3">${item.grado || '-'}</td>
+                <td class="p-3 font-semibold">${item.tabacos || 0} tabacos</td>
+                <td class="p-3 text-xs text-gray-500">${item.tallosPorTabaco || 40} c/u</td>
+                <td class="p-3 font-extrabold text-emerald-900">${tallosTotales.toLocaleString()} tallos</td>
                 <td class="p-3 text-center">
-                    <span class="text-xs text-slate-400 italic">Gestionado por entradas/salidas</span>
+                    <button onclick="eliminarEntrada('${item.id}')" class="px-3 py-1 bg-rose-100 hover:bg-rose-200 text-rose-700 font-bold rounded-lg text-xs transition shadow-sm">
+                        🗑️ Eliminar
+                    </button>
                 </td>
             `;
             tbody.appendChild(tr);
