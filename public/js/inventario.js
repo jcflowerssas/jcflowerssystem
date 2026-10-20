@@ -16,41 +16,42 @@ document.addEventListener('DOMContentLoaded', () => {
 
 window.cargarInventario = function() {
     const tbody = document.getElementById('tabla-inventario-body');
-    if (!tbody) return;
+    
+    // 1. Cargar Entradas y Salidas buscando en todas las claves posibles
+    const entradasRaw = JSON.parse(localStorage.getItem('app_entradas') || localStorage.getItem('entradas') || '[]');
+    const salidasRaw = JSON.parse(localStorage.getItem('app_salidas') || localStorage.getItem('salidas') || '[]');
 
-    // Obtener entradas y salidas
-    const entradas = JSON.parse(localStorage.getItem('app_entradas') || '[]');
-    const salidas = JSON.parse(localStorage.getItem('app_salidas') || '[]');
-
-    // Función para normalizar texto (convierte "Freedom (Rojo)" y "Freedom" al mismo texto)
-    const normalizar = (txt) => {
-        if (!txt) return '';
-        return String(txt)
-            .toLowerCase()
-            .replace(/\(.*\)/g, '') // Elimina lo que esté entre paréntesis como (Rojo)
-            .trim();
+    // Función auxiliar para limpiar y estandarizar nombres de variedad
+    const normalizarVariedad = (v) => {
+        if (!v) return '';
+        return String(v).toLowerCase().replace(/\(.*\)/g, '').trim();
     };
 
     const mapaStock = {};
 
-    // 1. Procesar ENTRADAS
-    entradas.forEach(e => {
-        const u = normalizar(e.ubicacion);
-        const b = normalizar(e.bloque);
-        const v = normalizar(e.variedad);
-        const g = normalizar(e.grado);
+    // 2. Acumular ENTRADAS
+    entradasRaw.forEach(e => {
+        const u = (e.ubicacion || '').trim().toLowerCase();
+        const b = (e.bloque || '').trim().toLowerCase();
+        const vNorm = normalizarVariedad(e.variedad);
+        const g = (e.grado || '').trim().toLowerCase();
 
-        const clave = `${u}_${b}_${v}_${g}`;
+        const clave = `${u}_${b}_${vNorm}_${g}`;
 
         const tallos = Number(e.totalTallos) || Number(e.tallosDirectos) || (Number(e.tabacos || 0) * Number(e.tallosPorTabaco || 0)) || 0;
         const tabacos = Number(e.tabacos || 0);
+
+        // Detectar Tipo (Rojo vs Color)
+        const esRojo = vNorm.includes('freedom') || (e.tipo && e.tipo.toLowerCase() === 'rojo');
+        const tipoFinal = esRojo ? 'Rojo' : 'Color';
 
         if (!mapaStock[clave]) {
             mapaStock[clave] = {
                 ubicacion: e.ubicacion || '-',
                 bloque: e.bloque || '-',
                 variedad: e.variedad || '-',
-                tipo: e.tipo || (v.includes('freedom') ? 'Rojo' : 'Color'),
+                variedadNorm: vNorm,
+                tipo: tipoFinal,
                 grado: e.grado || '-',
                 tallosPorTabaco: Number(e.tallosPorTabaco) || 40,
                 entradasTallos: 0,
@@ -64,24 +65,26 @@ window.cargarInventario = function() {
         mapaStock[clave].entradasTabacos += tabacos;
     });
 
-    // 2. Procesar SALIDAS (Restar)
-    salidas.forEach(s => {
-        const u = normalizar(s.ubicacion);
-        const b = normalizar(s.bloque);
-        const v = normalizar(s.variedad);
-        const g = normalizar(s.grado);
+    // 3. Restar SALIDAS
+    salidasRaw.forEach(s => {
+        const u = (s.ubicacion || '').trim().toLowerCase();
+        const b = (s.bloque || '').trim().toLowerCase();
+        const vNorm = normalizarVariedad(s.variedad);
+        const g = (s.grado || '').trim().toLowerCase();
 
-        const clave = `${u}_${b}_${v}_${g}`;
+        const clave = `${u}_${b}_${vNorm}_${g}`;
 
         const tallos = Number(s.totalTallos) || Number(s.tallosDirectos) || (Number(s.tabacos || 0) * Number(s.tallosPorTabaco || 0)) || 0;
         const tabacos = Number(s.tabacos || 0);
 
         if (!mapaStock[clave]) {
+            const esRojo = vNorm.includes('freedom') || (s.tipo && s.tipo.toLowerCase() === 'rojo');
             mapaStock[clave] = {
                 ubicacion: s.ubicacion || '-',
                 bloque: s.bloque || '-',
                 variedad: s.variedad || '-',
-                tipo: s.tipo || (v.includes('freedom') ? 'Rojo' : 'Color'),
+                variedadNorm: vNorm,
+                tipo: esRojo ? 'Rojo' : 'Color',
                 grado: s.grado || '-',
                 tallosPorTabaco: Number(s.tallosPorTabaco) || 40,
                 entradasTallos: 0,
@@ -95,40 +98,94 @@ window.cargarInventario = function() {
         mapaStock[clave].salidasTabacos += tabacos;
     });
 
-    // 3. Renderizar resultados
-    tbody.innerHTML = '';
     const items = Object.values(mapaStock);
 
-    if (items.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-gray-400 italic">No hay productos registradas en el inventario.</td></tr>`;
-        return;
+    // 4. Actualizar las tarjetas de resumen (Resumen de Clasificación y Grado)
+    actualizarTablaResumen(items);
+
+    // 5. Renderizar en la tabla principal
+    if (tbody) {
+        tbody.innerHTML = '';
+
+        if (items.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-gray-400 italic">No hay productos registrados en inventario.</td></tr>`;
+            return;
+        }
+
+        items.forEach(item => {
+            const tallosNetos = item.entradasTallos - item.salidasTallos;
+            const tabacosNetos = item.entradasTabacos - item.salidasTabacos;
+
+            const badgeTipo = item.tipo === 'Rojo' 
+                ? '<span class="px-2 py-0.5 text-xs font-bold bg-rose-100 text-rose-700 rounded-full">Rojo</span>'
+                : '<span class="px-2 py-0.5 text-xs font-bold bg-amber-100 text-amber-700 rounded-full">Color</span>';
+
+            const tr = document.createElement('tr');
+            tr.className = 'border-b hover:bg-slate-50 text-sm text-slate-700';
+            tr.innerHTML = `
+                <td class="p-3 font-medium">${item.ubicacion}</td>
+                <td class="p-3">${item.bloque}</td>
+                <td class="p-3 font-bold text-slate-800">${item.variedad}</td>
+                <td class="p-3">${badgeTipo}</td>
+                <td class="p-3">${item.grado}</td>
+                <td class="p-3">${tabacosNetos > 0 ? tabacosNetos : 0} tabacos</td>
+                <td class="p-3 text-xs text-gray-500">${item.tallosPorTabaco} c/u</td>
+                <td class="p-3 font-extrabold ${tallosNetos < 0 ? 'text-rose-600' : 'text-emerald-900'}">
+                    ${tallosNetos.toLocaleString()} tallos
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
     }
+};
+
+// Función para rellenar los datos de la tarjeta de Resumen por Grado
+function actualizarTablaResumen(items) {
+    // Estructura contenedora del resumen
+    const resumen = {
+        rojo: { g50: 0, g40: 0, nacional: 0, totalTallos: 0, totalTabacos: 0 },
+        color: { g50: 0, g40: 0, nacional: 0, totalTallos: 0, totalTabacos: 0 }
+    };
 
     items.forEach(item => {
-        const tallosNetos = item.entradasTallos - item.salidasTallos;
-        const tabacosNetos = item.entradasTabacos - item.salidasTabacos;
+        const tallos = item.entradasTallos - item.salidasTallos;
+        const tabacos = item.entradasTabacos - item.salidasTabacos;
+        
+        if (tallos <= 0) return; // Solo sumar saldo positivo
 
-        const badgeTipo = item.tipo === 'Rojo' 
-            ? '<span class="px-2 py-0.5 text-xs font-bold bg-rose-100 text-rose-700 rounded-full">Rojo</span>'
-            : '<span class="px-2 py-0.5 text-xs font-bold bg-amber-100 text-amber-700 rounded-full">Color</span>';
+        const cat = item.tipo === 'Rojo' ? resumen.rojo : resumen.color;
+        const g = item.grado.toLowerCase();
 
-        const tr = document.createElement('tr');
-        tr.className = 'border-b hover:bg-slate-50 text-sm text-slate-700';
-        tr.innerHTML = `
-            <td class="p-3 font-medium">${item.ubicacion}</td>
-            <td class="p-3">${item.bloque}</td>
-            <td class="p-3 font-bold text-slate-800">${item.variedad}</td>
-            <td class="p-3">${badgeTipo}</td>
-            <td class="p-3">${item.grado}</td>
-            <td class="p-3">${tabacosNetos > 0 ? tabacosNetos : 0} tabacos</td>
-            <td class="p-3 text-xs text-gray-500">${item.tallosPorTabaco} c/u</td>
-            <td class="p-3 font-extrabold ${tallosNetos < 0 ? 'text-rose-600' : 'text-emerald-900'}">
-                ${tallosNetos.toLocaleString()} tallos
-            </td>
-        `;
-        tbody.appendChild(tr);
+        if (g.includes('50')) {
+            cat.g50 += tallos;
+        } else if (g.includes('40')) {
+            cat.g40 += tallos;
+        } else {
+            cat.nacional += tallos;
+        }
+
+        cat.totalTallos += tallos;
+        cat.totalTabacos += tabacos;
     });
-};
+
+    // Actualizar elementos HTML del Resumen si existen los IDs en la vista
+    const setTexto = (id, texto) => {
+        const el = document.getElementById(id);
+        if (el) el.innerText = texto;
+    };
+
+    // Rojo (Freedom)
+    setTexto('resumen-rojo-g50', `${resumen.rojo.g50.toLocaleString()} tallos`);
+    setTexto('resumen-rojo-g40', `${resumen.rojo.g40.toLocaleString()} tallos`);
+    setTexto('resumen-rojo-nac', `${resumen.rojo.nacional.toLocaleString()} tallos`);
+    setTexto('resumen-rojo-total', `${resumen.rojo.totalTallos.toLocaleString()} tallos`);
+
+    // Colores
+    setTexto('resumen-color-g50', `${resumen.color.g50.toLocaleString()} tallos`);
+    setTexto('resumen-color-g40', `${resumen.color.g40.toLocaleString()} tallos`);
+    setTexto('resumen-color-nac', `${resumen.color.nacional.toLocaleString()} tallos`);
+    setTexto('resumen-color-total', `${resumen.color.totalTallos.toLocaleString()} tallos`);
+}
 
 function esFreedom(variedad) {
   if (!variedad) return false;
