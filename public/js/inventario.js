@@ -227,53 +227,72 @@ window.cargarInventario = async function() {
 
 function actualizarTablaResumen(items) {
     const resumen = {
-        rojo: { g50: 0, g40: 0, nacional: 0, totalTallos: 0, totalTabacos: 0 },
-        color: { g50: 0, g40: 0, nacional: 0, totalTallos: 0, totalTabacos: 0 }
+        rojo: { 
+            g50_tallos: 0, g50_tabacos: 0, 
+            g40_tallos: 0, g40_tabacos: 0, 
+            nac_tallos: 0, nac_tabacos: 0, 
+            totalTallos: 0, totalTabacos: 0 
+        },
+        color: { 
+            g50_tallos: 0, g50_tabacos: 0, 
+            g40_tallos: 0, g40_tabacos: 0, 
+            nac_tallos: 0, nac_tabacos: 0, 
+            totalTallos: 0, totalTabacos: 0 
+        }
     };
 
-    items.forEach(item => {
-        const tallos = item.entradasTallos - item.salidasTallos;
-        const tabacos = item.entradasTabacos - item.salidasTabacos;
-        
-        if (tallos <= 0) return;
+    if (Array.isArray(items)) {
+        items.forEach(item => {
+            const tallos = Number(item.totalTallos) || (Number(item.tabacos || 0) * Number(item.tallosPorTabaco || 40)) || 0;
+            const tabacos = Number(item.tabacos) || 0;
 
-        const cat = item.tipo === 'Rojo' ? resumen.rojo : resumen.color;
-        const g = item.grado.toLowerCase();
+            if (tallos <= 0) return;
 
-        if (g.includes('50')) {
-            cat.g50 += tallos;
-        } else if (g.includes('40')) {
-            cat.g40 += tallos;
-        } else {
-            cat.nacional += tallos;
-        }
+            const tipo = (item.tipo || '').toLowerCase();
+            const variedad = (item.variedad || '').toLowerCase();
+            const grado = (item.grado || '').trim().toLowerCase();
 
-        cat.totalTallos += tallos;
-        cat.totalTabacos += tabacos;
-    });
+            const esRojo = variedad.includes('freedom') || tipo === 'rojo';
+            const cat = esRojo ? resumen.rojo : resumen.color;
+
+            if (grado.includes('50')) {
+                cat.g50_tallos += tallos;
+                cat.g50_tabacos += tabacos;
+            } else if (grado.includes('40')) {
+                cat.g40_tallos += tallos;
+                cat.g40_tabacos += tabacos;
+            } else {
+                cat.nac_tallos += tallos;
+                cat.nac_tabacos += tabacos;
+            }
+
+            cat.totalTallos += tallos;
+            cat.totalTabacos += tabacos;
+        });
+    }
 
     const setTexto = (id, tallos, tabacos) => {
         const el = document.getElementById(id);
         if (el) {
-            el.innerHTML = `${tallos.toLocaleString()} tallos<br><span class="text-gray-500 font-normal">(${tabacos} tabacos)</span>`;
+            el.innerHTML = `${tallos.toLocaleString()} tallos<br><span class="text-gray-500 font-normal">(${tabacos.toLocaleString()} tabacos)</span>`;
         }
     };
 
     // Actualizar Freedom (Rojo)
-    setTexto('rojo-g50', resumen.rojo.g50, 0);
-    setTexto('rojo-g40', resumen.rojo.g40, 0);
-    setTexto('rojo-nac', resumen.rojo.nacional, 0);
+    setTexto('rojo-g50', resumen.rojo.g50_tallos, resumen.rojo.g50_tabacos);
+    setTexto('rojo-g40', resumen.rojo.g40_tallos, resumen.rojo.g40_tabacos);
+    setTexto('rojo-nac', resumen.rojo.nac_tallos, resumen.rojo.nac_tabacos);
     setTexto('rojo-total', resumen.rojo.totalTallos, resumen.rojo.totalTabacos);
 
     // Actualizar Colores
-    setTexto('color-g50', resumen.color.g50, 0);
-    setTexto('color-g40', resumen.color.g40, 0);
-    setTexto('color-nac', resumen.color.nacional, 0);
+    setTexto('color-g50', resumen.color.g50_tallos, resumen.color.g50_tabacos);
+    setTexto('color-g40', resumen.color.g40_tallos, resumen.color.g40_tabacos);
+    setTexto('color-nac', resumen.color.nac_tallos, resumen.color.nac_tabacos);
     setTexto('color-total', resumen.color.totalTallos, resumen.color.totalTabacos);
 
     // Totales Generales
-    setTexto('tot-g50', resumen.rojo.g50 + resumen.color.g50, 0);
-    setTexto('tot-g40', resumen.rojo.g40 + resumen.color.g40, 0);
-    setTexto('tot-nac', resumen.rojo.nacional + resumen.color.nacional, 0);
+    setTexto('tot-g50', resumen.rojo.g50_tallos + resumen.color.g50_tallos, resumen.rojo.g50_tabacos + resumen.color.g50_tabacos);
+    setTexto('tot-g40', resumen.rojo.g40_tallos + resumen.color.g40_tallos, resumen.rojo.g40_tabacos + resumen.color.g40_tabacos);
+    setTexto('tot-nac', resumen.rojo.nac_tallos + resumen.color.nac_tallos, resumen.rojo.nac_tabacos + resumen.color.nac_tabacos);
     setTexto('tot-general', resumen.rojo.totalTallos + resumen.color.totalTallos, resumen.rojo.totalTabacos + resumen.color.totalTabacos);
 }
