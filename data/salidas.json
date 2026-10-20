@@ -1,24 +1,167 @@
 [
   {
-    "id": "1792516684058",
+    "id": "1792524293388",
     "fecha": "2026-10-20",
-    "ubicacion": "Zona A",
-    "bloque": "Bloque 1",
-    "variedad": "Freedom (Rojo)",
+    "ubicacion": "Estiba 3 Color Exportable",
+    "bloque": "Bloque 2",
+    "variedad": "High Bonita",
     "grado": "Grado 50",
-    "tabacos": 20,
-    "tallosPorTabaco": 40,
-    "totalTallos": 800
+    "tabacos": 2,
+    "tallosPorTabaco": 25,
+    "totalTallos": 50
   },
   {
-    "id": "1792516311242",
+    "id": "1792524275836",
     "fecha": "2026-10-20",
-    "ubicacion": "Zona A",
+    "ubicacion": "Estiba 3 Color Exportable",
+    "bloque": "Bloque 2",
+    "variedad": "Pink Floyd",
+    "grado": "Grado 50",
+    "tabacos": 2,
+    "tallosPorTabaco": 25,
+    "totalTallos": 50
+  },
+  {
+    "id": "1792524235908",
+    "fecha": "2026-10-20",
+    "ubicacion": "Estiba 3 Color Exportable",
+    "bloque": "Bloque 2",
+    "variedad": "New Face",
+    "grado": "Grado 50",
+    "tabacos": 2,
+    "tallosPorTabaco": 25,
+    "totalTallos": 50
+  },
+  {
+    "id": "1792524225091",
+    "fecha": "2026-10-20",
+    "ubicacion": "Estiba 3 Color Exportable",
+    "bloque": "Bloque 2",
+    "variedad": "Frutteto",
+    "grado": "Grado 50",
+    "tabacos": 2,
+    "tallosPorTabaco": 25,
+    "totalTallos": 50
+  },
+  {
+    "id": "1792524183075",
+    "fecha": "2026-10-20",
+    "ubicacion": "Estiba 3 Color Exportable",
+    "bloque": "Bloque 2",
+    "variedad": "Mondial",
+    "grado": "Grado 50",
+    "tabacos": 2,
+    "tallosPorTabaco": 25,
+    "totalTallos": 50
+  },
+  {
+    "id": "1792524154890",
+    "fecha": "2026-10-20",
+    "ubicacion": "Estiba 3 Color Exportable",
+    "bloque": "Bloque 3",
+    "variedad": "Summer Romance",
+    "grado": "Grado 50",
+    "tabacos": 2,
+    "tallosPorTabaco": 25,
+    "totalTallos": 50
+  },
+  {
+    "id": "1792524124659",
+    "fecha": "2026-10-20",
+    "ubicacion": "Estiba 3 Color Exportable",
+    "bloque": "Bloque 2",
+    "variedad": "High Bonita",
+    "grado": "Grado 50",
+    "tabacos": 1,
+    "tallosPorTabaco": 25,
+    "totalTallos": 25
+  },
+  {
+    "id": "1792524105018",
+    "fecha": "2026-10-20",
+    "ubicacion": "Estiba 2 Freedom Nacional",
     "bloque": "Bloque 1",
     "variedad": "Freedom (Rojo)",
-    "grado": "Grado 50",
-    "tabacos": 50,
+    "grado": "Nacional",
+    "tabacos": 2,
     "tallosPorTabaco": 40,
-    "totalTallos": 2000
+    "totalTallos": 80
+  },
+  {
+    "id": "1792523719693",
+    "fecha": "2026-10-20",
+    "ubicacion": "Estiba 4 Color Nacional",
+    "bloque": "Bloque 2",
+    "variedad": "Mondial",
+    "grado": "Nacional",
+    "tabacos": 3,
+    "tallosPorTabaco": 25,
+    "totalTallos": 75
+  },
+  {
+    "id": "1792523691333",
+    "fecha": "2026-10-20",
+    "ubicacion": "Estiba 4 Color Nacional",
+    "bloque": "Bloque 2",
+    "variedad": "High Bonita",
+    "grado": "Nacional",
+    "tabacos": 3,
+    "tallosPorTabaco": 25,
+    "totalTallos": 75
+  },
+  {
+    "id": "1792523647172",
+    "fecha": "2026-10-20",
+    "ubicacion": "Estiba 3 Color Exportable",
+    "bloque": "Bloque 2",
+    "variedad": "Frutteto",
+    "grado": "Grado 50",
+    "tabacos": 2,
+    "tallosPorTabaco": 40,
+    "totalTallos": 80
+  },
+  {
+    "id": "1792523623476",
+    "fecha": "2026-10-20",
+    "ubicacion": "Estiba 3 Color Exportable",
+    "bloque": "Bloque 2",
+    "variedad": "Vendela",
+    "grado": "Grado 50",
+    "tabacos": 2,
+    "tallosPorTabaco": 25,
+    "totalTallos": 50
+  },
+  {
+    "id": "1792523593772",
+    "fecha": "2026-10-20",
+    "ubicacion": "Estiba 3 Color Exportable",
+    "bloque": "Bloque 2",
+    "variedad": "High Bonita",
+    "grado": "Grado 50",
+    "tabacos": 1,
+    "tallosPorTabaco": 25,
+    "totalTallos": 25
+  },
+  {
+    "id": "1792523573899",
+    "fecha": "2026-10-20",
+    "ubicacion": "Estiba 3 Color Exportable",
+    "bloque": "Bloque 2",
+    "variedad": "Frutteto",
+    "grado": "Grado 50",
+    "tabacos": 2,
+    "tallosPorTabaco": 25,
+    "totalTallos": 50
+  },
+  {
+    "id": "1792523539819",
+    "fecha": "2026-10-20",
+    "ubicacion": "Estiba 2 Freedom Nacional",
+    "bloque": "Bloque 1",
+    "variedad": "Freedom (Rojo)",
+    "grado": "Nacional",
+    "tabacos": 10,
+    "tallosPorTabaco": 40,
+    "totalTallos": 400
   }
 ]

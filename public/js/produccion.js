@@ -1,102 +1,248 @@
-let graficoProduccionInstance = null;
+let chartInstance = null;
 
-async function renderizarGraficoProduccion() {
-    const canvas = document.getElementById('graficoProduccion');
-    if (!canvas) return;
+document.addEventListener('DOMContentLoaded', () => {
+    inicializarFiltrosProduccion();
+    cargarDatosYGraficar();
+});
 
+// Inicializar los inputs temporales y la lista de bloques
+async function inicializarFiltrosProduccion() {
+    cambiarTipoTemporal();
+    await cargarCheckboxesBloques();
+}
+
+// Cambiar el input temporal según se elija Día, Semana o Mes
+window.cambiarTipoTemporal = function() {
+    const tipo = document.getElementById('filtro-tipo-temporal')?.value;
+    const contenedor = document.getElementById('contenedor-dinamico-temporal');
+    if (!contenedor) return;
+
+    const fechaHoy = new Date().toISOString().split('T')[0];
+    const mesActual = fechaHoy.substring(0, 7); // YYYY-MM
+
+    if (tipo === 'dia') {
+        contenedor.innerHTML = `
+            <label class="block text-xs font-bold text-slate-600 mb-1">Seleccionar Fecha</label>
+            <input type="date" id="input-valor-temporal" value="${fechaHoy}" onchange="cargarDatosYGraficar()" class="w-full border rounded-xl px-3 py-2 text-sm bg-slate-50 font-medium">
+        `;
+    } else if (tipo === 'mes') {
+        contenedor.innerHTML = `
+            <label class="block text-xs font-bold text-slate-600 mb-1">Seleccionar Mes</label>
+            <input type="month" id="input-valor-temporal" value="${mesActual}" onchange="cargarDatosYGraficar()" class="w-full border rounded-xl px-3 py-2 text-sm bg-slate-50 font-medium">
+        `;
+    } else if (tipo === 'semana') {
+        contenedor.innerHTML = `
+            <label class="block text-xs font-bold text-slate-600 mb-1">Número de Semana (1 - 52)</label>
+            <input type="number" id="input-valor-temporal" min="1" max="52" value="43" placeholder="Ej. 43" oninput="cargarDatosYGraficar()" class="w-full border rounded-xl px-3 py-2 text-sm bg-slate-50 font-medium">
+        `;
+    }
+    cargarDatosYGraficar();
+};
+
+// Cargar opciones de bloques en el menú desplegable con checkboxes
+async function cargarCheckboxesBloques() {
+    let bloques = [];
     try {
-        const res = await fetch('/api/inventario');
-        const inventarioData = res.ok ? await res.json() : [];
+        const res = await fetch('/api/configuracion');
+        if (res.ok) {
+            const data = await res.json();
+            bloques = data.bloques || [];
+        }
+    } catch (e) {
+        const local = JSON.parse(localStorage.getItem('app_configuracion_listas') || '{}');
+        bloques = local.bloques || ['Bloque 1', 'Bloque 2', 'Bloque 3', 'Bloque 4'];
+    }
 
-        const periodoRadio = document.querySelector('input[name="periodoGrafico"]:checked')?.value || 'diario';
-        const filtroDia = document.getElementById('filtro-produccion-dia')?.value || '';
-        const filtroMes = document.getElementById('filtro-produccion-mes')?.value || '';
-        const filtroAnio = document.getElementById('filtro-produccion-anio')?.value || '';
-        const filtroBloque = document.getElementById('filtro-grafico-bloque')?.value || '';
+    const listaContainer = document.getElementById('lista-checkbox-bloques');
+    if (!listaContainer) return;
 
-        const datosAgrupados = {};
+    listaContainer.innerHTML = '';
+    bloques.forEach(b => {
+        listaContainer.innerHTML += `
+            <label class="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer hover:bg-slate-50 p-1 rounded">
+                <input type="checkbox" name="filtro-bloque-check" value="${b}" checked onchange="actualizarSeleccionBloques()" class="rounded text-emerald-600 w-4 h-4">
+                <span>${b}</span>
+            </label>
+        `;
+    });
+}
 
-        // Procesar exclusivamente los datos del Inventario del Cuarto Frío
-        inventarioData.forEach(item => {
-            if (!item.fecha) return;
-            const [ano, mes, dia] = item.fecha.split('-');
-            
-            // Aplicar filtros seleccionados
-            if (filtroBloque && item.bloque !== filtroBloque) return;
-            if (periodoRadio === 'diario' && filtroDia && item.fecha !== filtroDia) return;
-            if (periodoRadio === 'mensual' && filtroAnio && ano !== filtroAnio) return;
-            if (periodoRadio === 'mensual' && filtroMes && mes !== filtroMes) return;
-            if (periodoRadio === 'anual' && filtroAnio && ano !== filtroAnio) return;
+window.toggleDropdownBloques = function() {
+    const drop = document.getElementById('dropdown-bloques');
+    if (drop) drop.classList.toggle('hidden');
+};
 
-            // Definir etiqueta según el periodo seleccionado
-            let etiqueta = item.fecha;
-            if (periodoRadio === 'mensual') etiqueta = `${ano}-${mes}`;
-            if (periodoRadio === 'anual') etiqueta = `${ano}`;
+window.seleccionarTodosBloques = function(master) {
+    const checkboxes = document.querySelectorAll('input[name="filtro-bloque-check"]');
+    checkboxes.forEach(cb => cb.checked = master.checked);
+    actualizarSeleccionBloques();
+};
 
-            // Calcular total de tallos (tabacos * tallosPorTabaco)
-            const totalTallos = Number(item.tabacos || 0) * Number(item.tallosPorTabaco || 40);
-            datosAgrupados[etiqueta] = (datosAgrupados[etiqueta] || 0) + totalTallos;
+window.actualizarSeleccionBloques = function() {
+    const checkboxes = document.querySelectorAll('input[name="filtro-bloque-check"]:checked');
+    const texto = document.getElementById('texto-bloques-seleccionados');
+    
+    if (checkboxes.length === 0) {
+        texto.textContent = "Ningún bloque seleccionado";
+    } else {
+        const nombres = Array.from(checkboxes).map(cb => cb.value);
+        texto.textContent = nombres.length === document.querySelectorAll('input[name="filtro-bloque-check"]').length ? "Todos los Bloques" : nombres.join(', ');
+    }
+    cargarDatosYGraficar();
+};
+
+// Función auxiliar para calcular el número de semana de una fecha
+function obtenerNumeroSemana(d) {
+    d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
+    const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+    const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1)/7);
+    return weekNo;
+}
+
+async function cargarDatosYGraficar() {
+    let cortes = [];
+    
+    // 1. Intentar cargar desde la API del servidor
+    try {
+        const res = await fetch('/api/cortes');
+        if (res.ok) {
+            const data = await res.json();
+            if (Array.isArray(data) && data.length > 0) {
+                cortes = data;
+            }
+        }
+    } catch (e) {
+        console.warn('API cortes no disponible, buscando en almacenamiento local...');
+    }
+
+    // 2. Si la API está vacía, buscar en todas las llaves posibles de localStorage
+    if (!cortes || cortes.length === 0) {
+        const posiblesLlaves = ['app_cortes', 'app_entradas', 'cortes', 'entradas'];
+        for (const llave of posiblesLlaves) {
+            const datosLocal = localStorage.getItem(llave);
+            if (datosLocal) {
+                try {
+                    const parsed = JSON.parse(datosLocal);
+                    if (Array.isArray(parsed) && parsed.length > 0) {
+                        cortes = parsed;
+                        console.log(`✅ Datos encontrados en localStorage bajo la llave: "${llave}"`, cortes);
+                        break;
+                    }
+                } catch (err) {
+                    console.warn(`Error al parsear ${llave}:`, err);
+                }
+            }
+        }
+    }
+
+    console.log("📊 Total de registros cargados para el gráfico:", cortes);
+
+    const tipoTemporal = document.getElementById('filtro-tipo-temporal')?.value;
+    const valorTemporal = document.getElementById('input-valor-temporal')?.value;
+    
+    const checkboxesSeleccionados = document.querySelectorAll('input[name="filtro-bloque-check"]:checked');
+    const bloquesPermitidos = Array.from(checkboxesSeleccionados).map(cb => cb.value);
+
+    // 3. Filtrar los registros según el periodo y los bloques seleccionados
+    const cortesFiltrados = cortes.filter(item => {
+        const fechaStr = item.fecha || item.fechaIngreso || '';
+        const bloqueStr = item.bloque || '';
+        
+        if (!fechaStr || !bloqueStr) return false;
+        if (bloquesPermitidos.length > 0 && !bloquesPermitidos.includes(bloqueStr)) return false;
+
+        if (tipoTemporal === 'dia') {
+            return fechaStr === valorTemporal;
+        } else if (tipoTemporal === 'mes') {
+            const mesItem = fechaStr.substring(0, 7); // Formato YYYY-MM
+            return mesItem === valorTemporal;
+        } else if (tipoTemporal === 'semana') {
+            const fechaItem = new Date(fechaStr + 'T00:00:00');
+            if (isNaN(fechaItem.getTime())) return false;
+            const semanaItem = obtenerNumeroSemana(fechaItem);
+            return Number(semanaItem) === Number(valorTemporal);
+        }
+        return true;
+    });
+
+    console.log("🔍 Registros filtrados después de aplicar los filtros:", cortesFiltrados);
+
+    // 4. Extraer etiquetas únicas (fechas) ordenadas cronológicamente
+    const etiquetasSet = new Set();
+    cortesFiltrados.forEach(c => etiquetasSet.add(c.fecha || c.fechaIngreso));
+    const etiquetas = Array.from(etiquetasSet).sort();
+
+    const coloresPalette = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
+    let colorIndex = 0;
+
+    const datasets = bloquesPermitidos.map(bloque => {
+        const color = coloresPalette[colorIndex % coloresPalette.length];
+        colorIndex++;
+
+        const dataPuntos = etiquetas.map(fecha => {
+            const registrosMismaFechaBloque = cortesFiltrados.filter(c => (c.fecha || c.fechaIngreso) === fecha && c.bloque === bloque);
+            let totalTallos = 0;
+            registrosMismaFechaBloque.forEach(r => {
+                totalTallos += Number(r.totalTallos) || (Number(r.tabacos || 0) * Number(r.tallosPorTabaco || 40)) || 0;
+            });
+            return totalTallos;
         });
 
-        let etiquetas = Object.keys(datosAgrupados).sort();
-        let valores = etiquetas.map(et => Math.round(datosAgrupados[et]));
+        return {
+            label: bloque,
+            data: dataPuntos,
+            borderColor: color,
+            backgroundColor: color,
+            borderWidth: 2,
+            pointRadius: 6,
+            pointHoverRadius: 8,
+            fill: false,
+            tension: 0.1
+        };
+    });
 
-        if (graficoProduccionInstance) {
-            graficoProduccionInstance.destroy();
-        }
+    renderizarGrafico(etiquetas.length > 0 ? etiquetas : ['Sin registros en este periodo'], datasets);
+}
 
-        graficoProduccionInstance = new Chart(canvas, {
-            type: 'line', // Tipo línea para lograr el estilo de tendencia con área
-            data: {
-                labels: etiquetas,
-                datasets: [{
-                    label: filtroBloque ? `Inventario Cuarto Frío - ${filtroBloque}` : 'Inventario Cuarto Frío - Total Tallos',
-                    data: valores,
-                    borderColor: '#4338ca', // Tono índigo/morado oscuro para la línea superior
-                    backgroundColor: 'rgba(67, 56, 202, 0.25)', // Área sombreada semitransparente
-                    borderWidth: 2,
-                    fill: true, // Habilita el sombreado debajo de la línea
-                    tension: 0.2, // Suaviza ligeramente la curva
-                    pointRadius: 4,
-                    pointBackgroundColor: '#4338ca'
-                }]
+// Renderizar o actualizar la gráfica usando Chart.js
+function renderizarGrafico(etiquetas, datasets) {
+    const ctx = document.getElementById('graficoProduccion')?.getContext('2d');
+    if (!ctx) return;
+
+    if (chartInstance) {
+        chartInstance.destroy();
+    }
+
+    chartInstance = new Chart(ctx, {
+        type: 'line', // Tipo línea uniendo puntos de dispersión
+        data: {
+            labels: etiquetas.length > 0 ? etiquetas : ['Sin datos'],
+            datasets: datasets.length > 0 ? datasets : [{ label: 'Sin registros', data: [0], borderColor: '#cbd5e1' }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                }
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        grid: {
-                            color: 'rgba(0, 0, 0, 0.08)' // Líneas de cuadrícula sutiles de fondo
-                        },
-                        title: { display: true, text: 'Cantidad Total de Tallos' }
-                    },
-                    x: {
-                        grid: {
-                            color: 'rgba(0, 0, 0, 0.08)'
-                        },
-                        title: { display: true, text: periodoRadio.toUpperCase() }
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Total de Tallos Cosechados'
                     }
                 },
-                plugins: {
-                    legend: {
+                x: {
+                    title: {
                         display: true,
-                        position: 'top'
+                        text: 'Fecha'
                     }
                 }
             }
-        });
-
-    } catch (err) {
-        console.error('Error al generar gráfico de producción estilizado:', err);
-    }
+        }
+    });
 }
-
-// Inicializar vista de producción al cargar
-window.addEventListener('DOMContentLoaded', () => {
-    const fechaInput = document.getElementById('filtro-produccion-dia');
-    if (fechaInput && !fechaInput.value) {
-        fechaInput.valueAsDate = new Date();
-    }
-});

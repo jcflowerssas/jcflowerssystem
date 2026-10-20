@@ -1,27 +1,30 @@
 {
   "ubicaciones": [
-    "Mesa 1",
-    "Mesa 2",
-    "Mesa 3",
-    "Cuarto Frío Principal",
-    "Zona A",
-    "Zona B",
-    "1"
+    "Estiba 1 Freedom Exportable",
+    "Estiba 2 Freedom Nacional",
+    "Estiba 3 Color Exportable",
+    "Estiba 4 Color Nacional",
+    "Estiba 5 Devoluciones"
   ],
   "bloques": [
     "Bloque 1",
     "Bloque 2",
     "Bloque 3",
-    "Bloque 4",
-    "Bloque 5"
+    "Devoluciones"
   ],
   "variedades": [
     "Freedom (Rojo)",
     "Vendela",
     "Mondial",
-    "Gotcha",
-    "Explorer",
-    "Topaz"
+    "Deep Purple",
+    "Moody Blue",
+    "Pink Floyd",
+    "New Face",
+    "Frutteto",
+    "High Bonita",
+    "Ligth House",
+    "Summer Romance",
+    "Todas"
   ],
   "grados": [
     "Grado 50",
@@ -29,7 +32,12 @@
     "Nacional"
   ],
   "cortadores": [
-    "Ana Martínez",
-    "Ivanna Flores"
+    "Ivanna Flores",
+    "Andrea Moreno",
+    "Beatriz Jaime",
+    "Jose Arevalo",
+    "Luz Marina R.",
+    "Vanesa Santana",
+    "Erisinda Guacaneme"
   ]
 }

@@ -7,23 +7,20 @@ const configuracionDefecto = {
     cortadores: ['Juan Pérez', 'María Gómez', 'Carlos Rodríguez', 'Ana Martínez']
 };
 
-// Obtener listas guardadas en producción sin sobrescribir nunca la información existente
+// Obtener listas guardadas combinando servidor, localStorage y compatibilidad total
 function obtenerConfiguracion() {
-    const configGuardada = localStorage.getItem('app_configuracion_listas');
+    const configGuardada = localStorage.getItem('app_configuracion_listas') || localStorage.getItem('app_configuracion');
     if (configGuardada) {
         try {
             const parsed = JSON.parse(configGuardada);
-            // Validar que tenga las propiedades mínimas
             if (parsed && typeof parsed === 'object') {
                 return parsed;
             }
         } catch (e) {
-            console.error("Error al leer configuración de producción:", e);
+            console.error("Error al leer configuración:", e);
         }
     }
     
-    // Si no hay nada guardado, por primera vez podemos usar las por defecto o un objeto vacío seguro
-    // (Aquí usamos las por defecto para que no inicie totalmente en blanco si es primera vez)
     return {
         ubicaciones: [],
         bloques: [],
@@ -33,9 +30,47 @@ function obtenerConfiguracion() {
     };
 }
 
+// Función clave para guardar localmente en todas las claves y sincronizar con el servidor backend
+async function guardarYSincronizarConfiguracion(config) {
+    // 1. Guardar en localStorage bajo todas las claves que el sistema consulta
+    localStorage.setItem('app_configuracion_listas', JSON.stringify(config));
+    localStorage.setItem('app_configuracion', JSON.stringify(config));
+    
+    Object.keys(config).forEach(tipo => {
+        localStorage.setItem('app_' + tipo, JSON.stringify(config[tipo]));
+    });
+
+    // 2. Enviar automáticamente al servidor para que persista y se refleje en todas las secciones
+    try {
+        await fetch('/api/configuracion', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(config)
+        });
+        console.log("✅ Configuración sincronizada correctamente con el servidor.");
+    } catch (e) {
+        console.warn("⚠️ Servidor no disponible, configuración guardada localmente:", e);
+    }
+}
+
 // Cargar y mostrar los elementos actuales en la sección de configuración
-window.cargarListasConfiguradas = function() {
-    const config = obtenerConfiguracion();
+window.cargarListasConfiguradas = async function() {
+    let config = obtenerConfiguracion();
+
+    // Intentar refrescar directamente desde el servidor al abrir la página
+    try {
+        const res = await fetch('/api/configuracion');
+        if (res.ok) {
+            const data = await res.json();
+            if (data && typeof data === 'object' && Object.keys(data).length > 0) {
+                config = data;
+                localStorage.setItem('app_configuracion_listas', JSON.stringify(config));
+                localStorage.setItem('app_configuracion', JSON.stringify(config));
+            }
+        }
+    } catch (e) {
+        console.warn('Usando configuración local (servidor no disponible)');
+    }
 
     const mapaListas = {
         ubicaciones: 'lista-ubicaciones',
@@ -70,12 +105,12 @@ window.cargarListasConfiguradas = function() {
         });
     });
 
-    // Actualizar los selectores de los modales
+    // Actualizar los selectores de los modales en toda la app
     actualizarTodosLosSelects();
 };
 
-// Agregar un nuevo elemento sin recargar la página
-window.agregarItemConfig = function(event, tipo) {
+// Agregar un nuevo elemento sin recargar y sincronizando de inmediato
+window.agregarItemConfig = async function(event, tipo) {
     if (event) {
         event.preventDefault(); // EVITA LA RECARGA DE LA PÁGINA
     }
@@ -92,20 +127,24 @@ window.agregarItemConfig = function(event, tipo) {
     // Evitar duplicados
     if (!config[tipo].includes(valor)) {
         config[tipo].push(valor);
-        localStorage.setItem('app_configuracion_listas', JSON.stringify(config));
         input.value = '';
+        
+        // Guardar y sincronizar con servidor y navegador
+        await guardarYSincronizarConfiguracion(config);
         window.cargarListasConfiguradas();
     } else {
         alert('Este elemento ya existe en la lista.');
     }
 };
 
-// Eliminar un elemento
-window.eliminarItemConfig = function(tipo, index) {
+// Eliminar un elemento y sincronizar de inmediato
+window.eliminarItemConfig = async function(tipo, index) {
     const config = obtenerConfiguracion();
     if (config[tipo] && config[tipo][index] !== undefined) {
         config[tipo].splice(index, 1);
-        localStorage.setItem('app_configuracion_listas', JSON.stringify(config));
+        
+        // Guardar y sincronizar con servidor y navegador
+        await guardarYSincronizarConfiguracion(config);
         window.cargarListasConfiguradas();
     }
 };
@@ -168,7 +207,6 @@ window.exportarRespaldoSistema = async function() {
     const respaldo = {};
 
     try {
-        // Consultar directamente al servidor para obtener los datos oficiales y actualizados
         const [resConfig, resEntradas, resSalidas, resCortes, resCortadores] = await Promise.all([
             fetch('/api/configuracion').catch(() => null),
             fetch('/api/entradas').catch(() => null),
@@ -186,7 +224,6 @@ window.exportarRespaldoSistema = async function() {
         console.warn('No se pudo conectar con el servidor para la exportación:', e);
     }
 
-    // Respaldar también cualquier otra clave adicional en localStorage que empiece por 'app_'
     for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
         if (key && key.startsWith('app_') && !respaldo[key]) {
@@ -198,7 +235,6 @@ window.exportarRespaldoSistema = async function() {
         }
     }
 
-    // Crear y descargar el archivo JSON con toda la información unificada
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(respaldo, null, 2));
     const downloadAnchor = document.createElement('a');
     downloadAnchor.setAttribute("href", dataStr);
@@ -227,7 +263,6 @@ window.importarRespaldoSistema = function(event) {
             }
 
             if (confirm('¿Estás seguro de restaurar este respaldo? Se sobrescribirán los datos actuales del sistema con los del archivo (incluyendo cortes, salidas y entradas).')) {
-                // 1. Restaurar todas las claves en localStorage
                 Object.keys(respaldo).forEach(key => {
                     const val = respaldo[key];
                     if (typeof val === 'object') {
@@ -237,7 +272,6 @@ window.importarRespaldoSistema = function(event) {
                     }
                 });
 
-                // 2. Sincronizar listas de configuración con el servidor
                 if (respaldo['app_configuracion_listas']) {
                     try {
                         await fetch('/api/configuracion', {
@@ -250,7 +284,6 @@ window.importarRespaldoSistema = function(event) {
                     }
                 }
 
-                // Función auxiliar para enviar colecciones al servidor de manera ordenada
                 const sincronizarColeccion = async (endpoint, arrayData) => {
                     if (Array.isArray(arrayData)) {
                         for (const item of arrayData) {
@@ -267,16 +300,9 @@ window.importarRespaldoSistema = function(event) {
                     }
                 };
 
-                // 3. Sincronizar Entradas con el servidor
                 await sincronizarColeccion('/api/entradas', respaldo['app_entradas']);
-
-                // 4. Sincronizar Salidas con el servidor
                 await sincronizarColeccion('/api/salidas', respaldo['app_salidas']);
-
-                // 5. Sincronizar Cortes con el servidor
                 await sincronizarColeccion('/api/cortes', respaldo['app_cortes']);
-
-                // 6. Sincronizar Rendimiento de Cortadores con el servidor
                 await sincronizarColeccion('/api/cortadores', respaldo['app_cortadores']);
 
                 alert('¡Respaldo completo restaurado exitosamente (inventario, salidas, cortes y cortadores) en el navegador y en el servidor! La página se recargará.');
