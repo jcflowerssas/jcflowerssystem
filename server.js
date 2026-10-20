@@ -12,13 +12,13 @@ app.use(express.urlencoded({ extended: true }));
 // Servir archivos estáticos de la carpeta 'public'
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Directorio para almacenamiento persistente de datos
-const DATA_DIR = path.join(__dirname, 'data');
+// Directorio para almacenamiento persistente de datos (con soporte para volumen en Railway)
+const DATA_DIR = process.env.RAILWAY_VOLUME_MOUNT_PATH || path.join(__dirname, 'data');
 if (!fs.existsSync(DATA_DIR)) {
     fs.mkdirSync(DATA_DIR, { recursive: true });
 }
 
-// Rutas de archivos JSON de almacenamiento
+// Rutas de archivos JSON de almacenamiento dentro del volumen persistente
 const ARCHIVOS = {
     entradas: path.join(DATA_DIR, 'entradas.json'),
     salidas: path.join(DATA_DIR, 'salidas.json'),
