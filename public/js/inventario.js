@@ -14,15 +14,121 @@ document.addEventListener('DOMContentLoaded', () => {
   if (filtroAntiguedad) filtroAntiguedad.addEventListener('change', filtrarYRenderizar);
 });
 
-async function cargarInventario() {
-  try {
-    const res = await fetch('/api/inventario');
-    inventarioGlobal = res.ok ? await res.json() : [];
-    filtrarYRenderizar();
-  } catch (error) {
-    console.error('Error al cargar el inventario:', error);
-  }
-}
+window.cargarInventario = function() {
+    const tbody = document.getElementById('tabla-inventario-body');
+    if (!tbody) return;
+
+    // Obtener entradas y salidas
+    const entradas = JSON.parse(localStorage.getItem('app_entradas') || '[]');
+    const salidas = JSON.parse(localStorage.getItem('app_salidas') || '[]');
+
+    // Función para normalizar texto (convierte "Freedom (Rojo)" y "Freedom" al mismo texto)
+    const normalizar = (txt) => {
+        if (!txt) return '';
+        return String(txt)
+            .toLowerCase()
+            .replace(/\(.*\)/g, '') // Elimina lo que esté entre paréntesis como (Rojo)
+            .trim();
+    };
+
+    const mapaStock = {};
+
+    // 1. Procesar ENTRADAS
+    entradas.forEach(e => {
+        const u = normalizar(e.ubicacion);
+        const b = normalizar(e.bloque);
+        const v = normalizar(e.variedad);
+        const g = normalizar(e.grado);
+
+        const clave = `${u}_${b}_${v}_${g}`;
+
+        const tallos = Number(e.totalTallos) || Number(e.tallosDirectos) || (Number(e.tabacos || 0) * Number(e.tallosPorTabaco || 0)) || 0;
+        const tabacos = Number(e.tabacos || 0);
+
+        if (!mapaStock[clave]) {
+            mapaStock[clave] = {
+                ubicacion: e.ubicacion || '-',
+                bloque: e.bloque || '-',
+                variedad: e.variedad || '-',
+                tipo: e.tipo || (v.includes('freedom') ? 'Rojo' : 'Color'),
+                grado: e.grado || '-',
+                tallosPorTabaco: Number(e.tallosPorTabaco) || 40,
+                entradasTallos: 0,
+                salidasTallos: 0,
+                entradasTabacos: 0,
+                salidasTabacos: 0
+            };
+        }
+
+        mapaStock[clave].entradasTallos += tallos;
+        mapaStock[clave].entradasTabacos += tabacos;
+    });
+
+    // 2. Procesar SALIDAS (Restar)
+    salidas.forEach(s => {
+        const u = normalizar(s.ubicacion);
+        const b = normalizar(s.bloque);
+        const v = normalizar(s.variedad);
+        const g = normalizar(s.grado);
+
+        const clave = `${u}_${b}_${v}_${g}`;
+
+        const tallos = Number(s.totalTallos) || Number(s.tallosDirectos) || (Number(s.tabacos || 0) * Number(s.tallosPorTabaco || 0)) || 0;
+        const tabacos = Number(s.tabacos || 0);
+
+        if (!mapaStock[clave]) {
+            mapaStock[clave] = {
+                ubicacion: s.ubicacion || '-',
+                bloque: s.bloque || '-',
+                variedad: s.variedad || '-',
+                tipo: s.tipo || (v.includes('freedom') ? 'Rojo' : 'Color'),
+                grado: s.grado || '-',
+                tallosPorTabaco: Number(s.tallosPorTabaco) || 40,
+                entradasTallos: 0,
+                salidasTallos: 0,
+                entradasTabacos: 0,
+                salidasTabacos: 0
+            };
+        }
+
+        mapaStock[clave].salidasTallos += tallos;
+        mapaStock[clave].salidasTabacos += tabacos;
+    });
+
+    // 3. Renderizar resultados
+    tbody.innerHTML = '';
+    const items = Object.values(mapaStock);
+
+    if (items.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-gray-400 italic">No hay productos registradas en el inventario.</td></tr>`;
+        return;
+    }
+
+    items.forEach(item => {
+        const tallosNetos = item.entradasTallos - item.salidasTallos;
+        const tabacosNetos = item.entradasTabacos - item.salidasTabacos;
+
+        const badgeTipo = item.tipo === 'Rojo' 
+            ? '<span class="px-2 py-0.5 text-xs font-bold bg-rose-100 text-rose-700 rounded-full">Rojo</span>'
+            : '<span class="px-2 py-0.5 text-xs font-bold bg-amber-100 text-amber-700 rounded-full">Color</span>';
+
+        const tr = document.createElement('tr');
+        tr.className = 'border-b hover:bg-slate-50 text-sm text-slate-700';
+        tr.innerHTML = `
+            <td class="p-3 font-medium">${item.ubicacion}</td>
+            <td class="p-3">${item.bloque}</td>
+            <td class="p-3 font-bold text-slate-800">${item.variedad}</td>
+            <td class="p-3">${badgeTipo}</td>
+            <td class="p-3">${item.grado}</td>
+            <td class="p-3">${tabacosNetos > 0 ? tabacosNetos : 0} tabacos</td>
+            <td class="p-3 text-xs text-gray-500">${item.tallosPorTabaco} c/u</td>
+            <td class="p-3 font-extrabold ${tallosNetos < 0 ? 'text-rose-600' : 'text-emerald-900'}">
+                ${tallosNetos.toLocaleString()} tallos
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+};
 
 function esFreedom(variedad) {
   if (!variedad) return false;
