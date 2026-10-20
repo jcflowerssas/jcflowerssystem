@@ -1,0 +1,35 @@
+{
+  "ubicaciones": [
+    "Mesa 1",
+    "Mesa 2",
+    "Mesa 3",
+    "Cuarto Frío Principal",
+    "Zona A",
+    "Zona B",
+    "1"
+  ],
+  "bloques": [
+    "Bloque 1",
+    "Bloque 2",
+    "Bloque 3",
+    "Bloque 4",
+    "Bloque 5"
+  ],
+  "variedades": [
+    "Freedom (Rojo)",
+    "Vendela",
+    "Mondial",
+    "Gotcha",
+    "Explorer",
+    "Topaz"
+  ],
+  "grados": [
+    "Grado 50",
+    "Grado 40",
+    "Nacional"
+  ],
+  "cortadores": [
+    "Ana Martínez",
+    "Ivanna Flores"
+  ]
+}

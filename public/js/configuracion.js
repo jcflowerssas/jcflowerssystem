@@ -162,3 +162,133 @@ document.addEventListener('DOMContentLoaded', () => {
         window.cargarListasConfiguradas();
     }
 });
+
+// Exportar un respaldo completo consultando al servidor y al almacenamiento local
+window.exportarRespaldoSistema = async function() {
+    const respaldo = {};
+
+    try {
+        // Consultar directamente al servidor para obtener los datos oficiales y actualizados
+        const [resConfig, resEntradas, resSalidas, resCortes, resCortadores] = await Promise.all([
+            fetch('/api/configuracion').catch(() => null),
+            fetch('/api/entradas').catch(() => null),
+            fetch('/api/salidas').catch(() => null),
+            fetch('/api/cortes').catch(() => null),
+            fetch('/api/cortadores').catch(() => null)
+        ]);
+
+        if (resConfig && resConfig.ok) respaldo['app_configuracion_listas'] = await resConfig.json();
+        if (resEntradas && resEntradas.ok) respaldo['app_entradas'] = await resEntradas.json();
+        if (resSalidas && resSalidas.ok) respaldo['app_salidas'] = await resSalidas.json();
+        if (resCortes && resCortes.ok) respaldo['app_cortes'] = await resCortes.json();
+        if (resCortadores && resCortadores.ok) respaldo['app_cortadores'] = await resCortadores.json();
+    } catch (e) {
+        console.warn('No se pudo conectar con el servidor para la exportación:', e);
+    }
+
+    // Respaldar también cualquier otra clave adicional en localStorage que empiece por 'app_'
+    for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('app_') && !respaldo[key]) {
+            try {
+                respaldo[key] = JSON.parse(localStorage.getItem(key));
+            } catch (e) {
+                respaldo[key] = localStorage.getItem(key);
+            }
+        }
+    }
+
+    // Crear y descargar el archivo JSON con toda la información unificada
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(respaldo, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    
+    const fechaActual = new Date().toISOString().split('T')[0];
+    downloadAnchor.setAttribute("download", `respaldo_sistema_san_sebastian_${fechaActual}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+};
+
+// Importar y restaurar el respaldo completo desde un archivo JSON subido por el usuario
+window.importarRespaldoSistema = function(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        try {
+            const contenido = e.target.result;
+            const respaldo = JSON.parse(contenido);
+
+            if (!respaldo || typeof respaldo !== 'object') {
+                alert('El archivo seleccionado no tiene un formato válido.');
+                return;
+            }
+
+            if (confirm('¿Estás seguro de restaurar este respaldo? Se sobrescribirán los datos actuales del sistema con los del archivo (incluyendo cortes, salidas y entradas).')) {
+                // 1. Restaurar todas las claves en localStorage
+                Object.keys(respaldo).forEach(key => {
+                    const val = respaldo[key];
+                    if (typeof val === 'object') {
+                        localStorage.setItem(key, JSON.stringify(val));
+                    } else {
+                        localStorage.setItem(key, val);
+                    }
+                });
+
+                // 2. Sincronizar listas de configuración con el servidor
+                if (respaldo['app_configuracion_listas']) {
+                    try {
+                        await fetch('/api/configuracion', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(respaldo['app_configuracion_listas'])
+                        });
+                    } catch (err) {
+                        console.warn('No se pudo sincronizar la configuración con el servidor:', err);
+                    }
+                }
+
+                // Función auxiliar para enviar colecciones al servidor de manera ordenada
+                const sincronizarColeccion = async (endpoint, arrayData) => {
+                    if (Array.isArray(arrayData)) {
+                        for (const item of arrayData) {
+                            try {
+                                await fetch(endpoint, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify(item)
+                                });
+                            } catch (err) {
+                                console.warn(`Error al sincronizar con ${endpoint}:`, err);
+                            }
+                        }
+                    }
+                };
+
+                // 3. Sincronizar Entradas con el servidor
+                await sincronizarColeccion('/api/entradas', respaldo['app_entradas']);
+
+                // 4. Sincronizar Salidas con el servidor
+                await sincronizarColeccion('/api/salidas', respaldo['app_salidas']);
+
+                // 5. Sincronizar Cortes con el servidor
+                await sincronizarColeccion('/api/cortes', respaldo['app_cortes']);
+
+                // 6. Sincronizar Rendimiento de Cortadores con el servidor
+                await sincronizarColeccion('/api/cortadores', respaldo['app_cortadores']);
+
+                alert('¡Respaldo completo restaurado exitosamente (inventario, salidas, cortes y cortadores) en el navegador y en el servidor! La página se recargará.');
+                location.reload();
+            } else {
+                event.target.value = '';
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Error al leer el archivo JSON. Asegúrate de que sea un respaldo válido del sistema.');
+            event.target.value = '';
+        }
+    };
+    reader.readAsText(file);
+};

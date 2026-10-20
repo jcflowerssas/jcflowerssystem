@@ -70,6 +70,31 @@
                 <ul id="lista-cortadores" class="divide-y divide-slate-100 max-h-48 overflow-y-auto text-sm"></ul>
             </div>
         </div>
+
+        <!-- SECCIÓN DE RESPALDO Y RESTAURACIÓN -->
+<div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 mt-6">
+    <div class="flex items-center justify-between border-b pb-3 mb-4">
+        <div>
+            <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
+                <span>💾</span> Respaldo y Restauración de Datos
+            </h3>
+            <p class="text-xs text-slate-500">Exporta una copia de seguridad completa del sistema o restaura tus registros desde un archivo guardado.</p>
+        </div>
+    </div>
+    
+    <div class="flex flex-wrap gap-4 items-center">
+        <!-- Botón para descargar el respaldo -->
+        <button type="button" onclick="exportarRespaldoSistema()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl text-xs shadow transition flex items-center gap-2">
+            <span>⬇️</span> Descargar Respaldo (JSON)
+        </button>
+        
+        <!-- Botón para subir y restaurar respaldo -->
+        <label class="px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl text-xs shadow transition flex items-center gap-2 cursor-pointer">
+            <span>⬆️</span> Restaurar desde Archivo
+            <input type="file" id="input-archivo-respaldo" accept=".json" onchange="importarRespaldoSistema(event)" class="hidden">
+        </label>
+    </div>
+</div>
     </main>
 
     <!-- SCRIPTS -->

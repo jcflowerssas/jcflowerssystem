@@ -1,13 +1,24 @@
 [
   {
-    "id": "1792515066584",
+    "id": "1792516684058",
     "fecha": "2026-10-20",
     "ubicacion": "Zona A",
     "bloque": "Bloque 1",
     "variedad": "Freedom (Rojo)",
     "grado": "Grado 50",
-    "tabacos": 51,
+    "tabacos": 20,
     "tallosPorTabaco": 40,
-    "totalTallos": 2040
+    "totalTallos": 800
+  },
+  {
+    "id": "1792516311242",
+    "fecha": "2026-10-20",
+    "ubicacion": "Zona A",
+    "bloque": "Bloque 1",
+    "variedad": "Freedom (Rojo)",
+    "grado": "Grado 50",
+    "tabacos": 50,
+    "tallosPorTabaco": 40,
+    "totalTallos": 2000
   }
 ]

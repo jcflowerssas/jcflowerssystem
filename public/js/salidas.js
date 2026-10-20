@@ -27,6 +27,7 @@ async function cargarDatosSalidas() {
 }
 
 // Calcular y renderizar tarjetas de estibas
+// Calcular y renderizar tarjetas de estibas restando correctamente las salidas
 function renderizarEstibas(entradas, salidas) {
     const grid = document.getElementById('grid-estibas');
     if (!grid) return;
@@ -34,12 +35,15 @@ function renderizarEstibas(entradas, salidas) {
     // Agrupar inventario neto por Ubicación (Estiba) y Variedad
     const inventarioPorEstiba = {};
 
+    // 1. Sumar Entradas
     entradas.forEach(item => {
         const ub = item.ubicacion || 'Sin Ubicación';
-        if (!inventarioPorEstiba[ub]) inventarioPorEstiba[ub] = { totalTallos: 0, totalTabacos: 0, variedades: {} };
+        if (!inventarioPorEstiba[ub]) {
+            inventarioPorEstiba[ub] = { totalTallos: 0, totalTabacos: 0, variedades: {} };
+        }
 
-        const tallos = Number(item.totalTallos) || (Number(item.tabacos || 0) * Number(item.tallosPorTabaco || 40)) || 0;
-        const tabacos = Number(item.tabacos) || 0;
+        const tallos = Math.abs(Number(item.totalTallos) || (Number(item.tabacos || 0) * Number(item.tallosPorTabaco || 40)) || 0);
+        const tabacos = Math.abs(Number(item.tabacos) || 0);
         const varNombre = item.variedad || 'General';
 
         inventarioPorEstiba[ub].totalTallos += tallos;
@@ -53,12 +57,12 @@ function renderizarEstibas(entradas, salidas) {
         if (item.grado) inventarioPorEstiba[ub].variedades[varNombre].grados.add(item.grado);
     });
 
-    // Restar salidas
+    // 2. Restar Salidas de forma estricta (asegurando valores absolutos positivos para la resta)
     salidas.forEach(item => {
         const ub = item.ubicacion || 'Sin Ubicación';
         if (inventarioPorEstiba[ub]) {
-            const tallos = Number(item.totalTallos) || (Number(item.tabacos || 0) * Number(item.tallosPorTabaco || 40)) || 0;
-            const tabacos = Number(item.tabacos) || 0;
+            const tallos = Math.abs(Number(item.totalTallos) || (Number(item.tabacos || 0) * Number(item.tallosPorTabaco || 40)) || 0);
+            const tabacos = Math.abs(Number(item.tabacos) || 0);
             const varNombre = item.variedad || 'General';
 
             inventarioPorEstiba[ub].totalTallos -= tallos;
@@ -82,7 +86,6 @@ function renderizarEstibas(entradas, salidas) {
     estibasKeys.forEach(ub => {
         const estiba = inventarioPorEstiba[ub];
         
-        // Generar lista de variedades con stock positivo en esta estiba
         let htmlVariedades = '';
         Object.keys(estiba.variedades).forEach(v => {
             const vData = estiba.variedades[v];
