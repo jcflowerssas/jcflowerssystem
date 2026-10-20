@@ -5,102 +5,253 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Control Cuarto Frío & Producción - Tomates San Sebastián</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-slate-100 min-h-screen">
-    <!-- Cabecera de la aplicación -->
-    <header class="bg-slate-900 text-white p-4 shadow-md flex justify-between items-center">
+
+    <!-- CABECERA Y NAVEGACIÓN PRINCIPAL -->
+    <header class="bg-slate-900 text-white p-4 shadow-md flex flex-wrap justify-between items-center gap-4">
         <div>
-            <h1 class="text-xl font-bold">Control Cuarto Frío & Producción</h1>
+            <h1 class="text-xl font-bold flex items-center gap-2">
+                <span>📦</span> Control Cuarto Frío & Producción
+            </h1>
             <p class="text-xs text-slate-400">Tomates San Sebastián - Finca La Primavera</p>
         </div>
-        <nav class="space-x-2">
-            <button class="px-3 py-1.5 bg-blue-600 rounded text-sm font-semibold">Inventario Principal</button>
+        <nav class="flex flex-wrap gap-2 text-sm font-semibold">
+            <button onclick="cambiarPestana('inventario')" id="btn-nav-inventario" class="px-3 py-1.5 bg-blue-600 text-white rounded-lg shadow">
+                Inventario Principal
+            </button>
+            <button onclick="cambiarPestana('cortadores')" id="btn-nav-cortadores" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg">
+                Rendimiento Cortadores
+            </button>
+            <button onclick="cambiarPestana('incompletos')" id="btn-nav-incompletos" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg">
+                Cortes Incompletos
+            </button>
+            <button onclick="cambiarPestana('produccion')" id="btn-nav-produccion" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg">
+                Producción por Bloque
+            </button>
+            <button onclick="abrirModalConfiguracion()" class="px-3 py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg shadow">
+                ⚙️ Configurar Listas
+            </button>
         </nav>
     </header>
 
     <main class="p-6 max-w-7xl mx-auto space-y-6">
-        
-        <!-- RESUMEN DE INVENTARIO POR CLASIFICACIÓN Y GRADO -->
-        <section class="bg-white rounded-xl shadow-md p-6">
-            <h2 class="text-lg font-bold text-slate-800 mb-4">Resumen de Inventario por Clasificación y Grado</h2>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="bg-slate-900 text-white text-sm">
-                            <th class="p-3 rounded-l-lg">TIPO / VARIEDAD</th>
-                            <th class="p-3">GRADO 50</th>
-                            <th class="p-3">GRADO 40</th>
-                            <th class="p-3">NACIONAL</th>
-                            <th class="p-3 rounded-r-lg">TOTAL (TALLOS / TABACOS)</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y text-sm">
-                        <!-- Fila Freedom (Rojo) -->
-                        <tr class="hover:bg-slate-50">
-                            <td class="p-3 font-medium flex items-center gap-2">
-                                <span class="w-3 h-3 rounded-full bg-rose-600 inline-block"></span> Freedom (Rojo)
-                            </td>
-                            <td class="p-3 text-blue-600 font-semibold" id="resumen-rojo-g50">0 tallos</td>
-                            <td class="p-3 text-blue-600 font-semibold" id="resumen-rojo-g40">0 tallos</td>
-                            <td class="p-3 text-rose-600 font-semibold" id="resumen-rojo-nac">0 tallos</td>
-                            <td class="p-3 text-rose-700 font-bold" id="resumen-rojo-total">0 tallos</td>
-                        </tr>
-                        <!-- Fila Colores -->
-                        <tr class="hover:bg-slate-50">
-                            <td class="p-3 font-medium flex items-center gap-2">
-                                <span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span> Colores (Otras Variedades)
-                            </td>
-                            <td class="p-3 text-blue-600 font-semibold" id="resumen-color-g50">0 tallos</td>
-                            <td class="p-3 text-blue-600 font-semibold" id="resumen-color-g40">0 tallos</td>
-                            <td class="p-3 text-amber-600 font-semibold" id="resumen-color-nac">0 tallos</td>
-                            <td class="p-3 text-amber-700 font-bold" id="resumen-color-total">0 tallos</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
 
-        <!-- Barra de Acciones y Filtros -->
-        <div class="flex flex-wrap justify-between items-center gap-4 bg-white p-4 rounded-xl shadow-md">
-            <div class="flex items-center gap-2">
-                <input type="text" placeholder="Buscar variedad, bloque..." class="border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+        <!-- ========================================== -->
+        <!-- PESTAÑA 1: INVENTARIO PRINCIPAL            -->
+        <!-- ========================================== -->
+        <div id="pestana-inventario" class="space-y-6">
+            
+            <!-- RESUMEN DE INVENTARIO POR CLASIFICACIÓN Y GRADO -->
+            <section class="bg-white rounded-xl shadow-md p-6">
+                <h2 class="text-lg font-bold text-slate-800 mb-4">Resumen de Inventario por Clasificación y Grado</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-900 text-white text-sm">
+                                <th class="p-3 rounded-l-lg">TIPO / VARIEDAD</th>
+                                <th class="p-3 text-center">GRADO 50</th>
+                                <th class="p-3 text-center">GRADO 40</th>
+                                <th class="p-3 text-center">NACIONAL</th>
+                                <th class="p-3 text-center rounded-r-lg">TOTAL (TALLOS / TABACOS)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y text-sm">
+                            <!-- Fila Freedom (Rojo) -->
+                            <tr class="hover:bg-slate-50">
+                                <td class="p-3 font-medium flex items-center gap-2">
+                                    <span class="w-3 h-3 rounded-full bg-rose-600 inline-block"></span> Freedom (Rojo)
+                                </td>
+                                <td class="p-3 text-center text-blue-600 font-semibold" id="resumen-rojo-g50">0 tallos</td>
+                                <td class="p-3 text-center text-blue-600 font-semibold" id="resumen-rojo-g40">0 tallos</td>
+                                <td class="p-3 text-center text-rose-600 font-semibold" id="resumen-rojo-nac">0 tallos</td>
+                                <td class="p-3 text-center text-rose-700 font-bold" id="resumen-rojo-total">0 tallos</td>
+                            </tr>
+                            <!-- Fila Colores -->
+                            <tr class="hover:bg-slate-50">
+                                <td class="p-3 font-medium flex items-center gap-2">
+                                    <span class="w-3 h-3 rounded-full bg-amber-500 inline-block"></span> Colores (Otras Variedades)
+                                </td>
+                                <td class="p-3 text-center text-blue-600 font-semibold" id="resumen-color-g50">0 tallos</td>
+                                <td class="p-3 text-center text-blue-600 font-semibold" id="resumen-color-g40">0 tallos</td>
+                                <td class="p-3 text-center text-amber-600 font-semibold" id="resumen-color-nac">0 tallos</td>
+                                <td class="p-3 text-center text-amber-700 font-bold" id="resumen-color-total">0 tallos</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- FILTROS Y BOTONES DE ACCIÓN -->
+            <div class="flex flex-wrap justify-between items-center gap-4 bg-white p-4 rounded-xl shadow-md">
+                <div class="flex flex-wrap items-center gap-2">
+                    <input type="text" id="filtro-buscar" placeholder="🔍 Buscar variedad, bloque..." class="border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                    <select id="filtro-tipo" class="border rounded-lg px-3 py-2 text-sm">
+                        <option value="">Todos los Tipos (Rojo y Colores)</option>
+                        <option value="Rojo">Solo Rojo (Freedom)</option>
+                        <option value="Color">Solo Colores</option>
+                    </select>
+                    <select id="filtro-grado" class="border rounded-lg px-3 py-2 text-sm">
+                        <option value="">Todos los Grados</option>
+                        <option value="Grado 50">Grado 50</option>
+                        <option value="Grado 40">Grado 40</option>
+                        <option value="Nacional">Nacional</option>
+                    </select>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="abrirModalEntrada()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-sm shadow transition">
+                        + Registrar Entrada
+                    </button>
+                    <button onclick="abrirModalSalida()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-semibold text-sm shadow transition">
+                        - Registrar Salida
+                    </button>
+                </div>
             </div>
-            <button onclick="abrirModalEntrada()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold text-sm shadow transition">
-                + Registrar Entrada
-            </button>
+
+            <!-- TABLA DE INVENTARIO GENERAL (NETO) -->
+            <section class="bg-white rounded-xl shadow-md overflow-hidden p-6">
+                <h3 class="text-md font-bold text-slate-800 mb-4">Stock de Inventario Disponible</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="border-b text-xs font-semibold text-slate-500 bg-slate-50">
+                                <th class="p-3">UBICACIÓN</th>
+                                <th class="p-3">BLOQUE</th>
+                                <th class="p-3">VARIEDAD</th>
+                                <th class="p-3">TIPO</th>
+                                <th class="p-3">GRADO</th>
+                                <th class="p-3">TABACOS</th>
+                                <th class="p-3">C/U</th>
+                                <th class="p-3">TOTAL TALLOS</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-inventario-body">
+                            <!-- Se renderiza desde inventario.js -->
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- HISTORIAL DE ENTRADAS Y SALIDAS -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Entradas -->
+                <section class="bg-white rounded-xl shadow-md p-6">
+                    <h3 class="text-md font-bold text-slate-800 mb-4">Registro Histórico de Entradas</h3>
+                    <div class="overflow-x-auto max-h-80 overflow-y-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b text-xs font-semibold text-slate-500 bg-slate-50">
+                                    <th class="p-2">Fecha</th>
+                                    <th class="p-2">Ubicación</th>
+                                    <th class="p-2">Variedad</th>
+                                    <th class="p-2">Tallos</th>
+                                    <th class="p-2 text-center">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-entradas-body" class="text-sm">
+                                <!-- Carga dinámica -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- Salidas -->
+                <section class="bg-white rounded-xl shadow-md p-6">
+                    <h3 class="text-md font-bold text-slate-800 mb-4">Registro Histórico de Salidas</h3>
+                    <div class="overflow-x-auto max-h-80 overflow-y-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="border-b text-xs font-semibold text-slate-500 bg-slate-50">
+                                    <th class="p-2">Fecha</th>
+                                    <th class="p-2">Ubicación</th>
+                                    <th class="p-2">Variedad</th>
+                                    <th class="p-2">Tallos</th>
+                                    <th class="p-2 text-center">Acción</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabla-salidas-body" class="text-sm">
+                                <!-- Carga dinámica -->
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
         </div>
 
-        <!-- TABLA PRINCIPAL DE INVENTARIO -->
-        <section class="bg-white rounded-xl shadow-md overflow-hidden p-6">
-            <h3 class="text-md font-bold text-slate-800 mb-4">Inventario Detallado (Neto)</h3>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse">
-                    <thead>
-                        <tr class="border-b text-xs font-semibold text-slate-500 bg-slate-50">
-                            <th class="p-3">UBICACIÓN</th>
-                            <th class="p-3">BLOQUE</th>
-                            <th class="p-3">VARIEDAD</th>
-                            <th class="p-3">TIPO</th>
-                            <th class="p-3">GRADO</th>
-                            <th class="p-3">TABACOS</th>
-                            <th class="p-3">C/U</th>
-                            <th class="p-3">TOTAL TALLOS</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabla-inventario-body">
-                        <!-- Los datos se cargan dinámicamente desde inventario.js -->
-                    </tbody>
-                </table>
+        <!-- ========================================== -->
+        <!-- PESTAÑA 2: RENDIMIENTO DE CORTADORES       -->
+        <!-- ========================================== -->
+        <div id="pestana-cortadores" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-md flex justify-between items-center">
+                <h2 class="text-lg font-bold text-slate-800">Rendimiento y Eficiencia de Cortadores</h2>
+                <div class="flex gap-2">
+                    <input type="week" id="filtro-semana-cortador" class="border rounded-lg px-3 py-2 text-sm">
+                    <button onclick="abrirModalCorte()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold">
+                        + Registrar Corte
+                    </button>
+                </div>
             </div>
-        </section>
+            <!-- Gráfica Scatter de Eficiencia -->
+            <div class="bg-white p-6 rounded-xl shadow-md">
+                <canvas id="grafica-cortadores" height="100"></canvas>
+            </div>
+            <!-- Tabla Eficiencia -->
+            <div class="bg-white p-6 rounded-xl shadow-md">
+                <h3 class="font-bold text-slate-800 mb-4">Ranking de Cortadores (Tallos / Hora)</h3>
+                <div id="ranking-cortadores-container" class="space-y-2">
+                    <!-- Se carga mediante cortadores.js -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- PESTAÑA 3: CORTES INCOMPLETOS              -->
+        <!-- ========================================== -->
+        <div id="pestana-incompletos" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-md">
+                <h2 class="text-lg font-bold text-slate-800 mb-2">Cortes Pendientes / Incompletos</h2>
+                <p class="text-sm text-slate-500 mb-4">Monitoreo de bloques sin cerrar horas de corte o tallos finales.</p>
+                <div id="contenedor-incompletos" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Se carga mediante incompletos.js -->
+                </div>
+            </div>
+        </div>
+
+        <!-- ========================================== -->
+        <!-- PESTAÑA 4: PRODUCCIÓN POR BLOQUE           -->
+        <!-- ========================================== -->
+        <div id="pestana-produccion" class="hidden space-y-6">
+            <div class="bg-white p-6 rounded-xl shadow-md">
+                <h2 class="text-lg font-bold text-slate-800 mb-4">Producción de Flores por Bloque</h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-900 text-white text-sm">
+                                <th class="p-3">Bloque</th>
+                                <th class="p-3">Variedad</th>
+                                <th class="p-3">Cortes Realizados</th>
+                                <th class="p-3">Total Tallos</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-produccion-body" class="text-sm divide-y">
+                            <!-- Se carga mediante produccion.js -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
     </main>
 
-    <!-- MODAL REGISTRAR ENTRADA -->
+    <!-- ========================================== -->
+    <!-- MODAL REGISTRAR ENTRADA                   -->
+    <!-- ========================================== -->
     <div id="modal-entrada" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4 z-50">
         <div class="bg-white rounded-xl max-w-lg w-full p-6 space-y-4 shadow-xl">
             <div class="flex justify-between items-center border-b pb-2">
                 <h3 class="text-lg font-bold text-slate-800">Registrar Entrada al Inventario</h3>
-                <button onclick="cerrarModal('modal-entrada')" class="text-gray-400 hover:text-gray-600 font-bold text-lg">&times;</button>
+                <button onclick="cerrarModal('modal-entrada')" class="text-gray-400 hover:text-gray-600 font-bold text-xl">&times;</button>
             </div>
             
             <form id="form-entrada" onsubmit="guardarEntrada(event)" class="space-y-3">
@@ -113,6 +264,7 @@
                     <select id="se-ubicacion" class="w-full border rounded-lg p-2 text-sm" required>
                         <option value="">-- Seleccione Ubicación --</option>
                         <option value="Estiba Rojo Viejo">Estiba Rojo Viejo</option>
+                        <option value="Estiba Devoluciones">Estiba Devoluciones</option>
                         <option value="Estiba Nacional Color 1">Estiba Nacional Color 1</option>
                         <option value="Estiba Exportable Color 1">Estiba Exportable Color 1</option>
                     </select>
@@ -123,6 +275,7 @@
                         <option value="">-- Seleccione Bloque --</option>
                         <option value="Bloque 1">Bloque 1</option>
                         <option value="Bloque 2">Bloque 2</option>
+                        <option value="Bloque 3">Bloque 3</option>
                     </select>
                 </div>
                 <div>
@@ -163,8 +316,150 @@
         </div>
     </div>
 
-    <!-- Scripts auxiliares de interfaz -->
+    <!-- ========================================== -->
+    <!-- MODAL REGISTRAR SALIDA                    -->
+    <!-- ========================================== -->
+    <div id="modal-salida" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-xl max-w-lg w-full p-6 space-y-4 shadow-xl">
+            <div class="flex justify-between items-center border-b pb-2">
+                <h3 class="text-lg font-bold text-slate-800">Registrar Salida del Inventario</h3>
+                <button onclick="cerrarModal('modal-salida')" class="text-gray-400 hover:text-gray-600 font-bold text-xl">&times;</button>
+            </div>
+            
+            <form id="form-salida" onsubmit="guardarSalida(event)" class="space-y-3">
+                <div>
+                    <label class="text-xs font-semibold text-slate-600">Fecha</label>
+                    <input type="date" id="ss-fecha" class="w-full border rounded-lg p-2 text-sm" required>
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-slate-600">Ubicación</label>
+                    <select id="ss-ubicacion" class="w-full border rounded-lg p-2 text-sm" required>
+                        <option value="">-- Seleccione Ubicación --</option>
+                        <option value="Estiba Rojo Viejo">Estiba Rojo Viejo</option>
+                        <option value="Estiba Devoluciones">Estiba Devoluciones</option>
+                        <option value="Estiba Nacional Color 1">Estiba Nacional Color 1</option>
+                        <option value="Estiba Exportable Color 1">Estiba Exportable Color 1</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-slate-600">Bloque</label>
+                    <select id="ss-bloque" class="w-full border rounded-lg p-2 text-sm" required>
+                        <option value="">-- Seleccione Bloque --</option>
+                        <option value="Bloque 1">Bloque 1</option>
+                        <option value="Bloque 2">Bloque 2</option>
+                        <option value="Bloque 3">Bloque 3</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-slate-600">Variedad</label>
+                    <select id="ss-variedad" class="w-full border rounded-lg p-2 text-sm" required>
+                        <option value="">-- Seleccione Variedad --</option>
+                        <option value="Freedom">Freedom</option>
+                        <option value="Vendela">Vendela</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="text-xs font-semibold text-slate-600">Grado</label>
+                    <select id="ss-grado" class="w-full border rounded-lg p-2 text-sm" required>
+                        <option value="">-- Seleccione Grado --</option>
+                        <option value="Nacional">Nacional</option>
+                        <option value="Grado 50">Grado 50</option>
+                        <option value="Grado 40">Grado 40</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-xs font-semibold text-slate-600">Cantidad Tabacos</label>
+                        <input type="number" id="ss-tabacos" class="w-full border rounded-lg p-2 text-sm" placeholder="0" required>
+                    </div>
+                    <div>
+                        <label class="text-xs font-semibold text-slate-600">Tallos por Tabaco</label>
+                        <select id="ss-tallos-tabaco" class="w-full border rounded-lg p-2 text-sm">
+                            <option value="40">40 tallos</option>
+                            <option value="25">25 tallos</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 pt-3">
+                    <button type="button" onclick="cerrarModal('modal-salida')" class="px-4 py-2 bg-gray-200 hover:bg-gray-300 rounded-lg text-sm font-semibold">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg text-sm font-semibold">Guardar Salida</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+   <!-- ========================================== -->
+<!-- MODAL CONFIGURAR LISTAS (COMPLETO)         -->
+<!-- ========================================== -->
+<div id="modal-configuracion" class="fixed inset-0 bg-black/50 hidden flex items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-xl max-w-2xl w-full p-6 space-y-4 shadow-xl">
+        <div class="flex justify-between items-center border-b pb-3">
+            <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                ⚙️ Configurar Listas Desplegables
+            </h3>
+            <button onclick="cerrarModalConfiguracion()" class="text-gray-400 hover:text-gray-600 font-bold text-xl">&times;</button>
+        </div>
+
+        <!-- Pestañas internas de la configuración -->
+        <div class="flex border-b text-sm font-semibold gap-2">
+            <button onclick="cambiarSubpestanaConfig('ubicaciones')" id="btn-cfg-ubicaciones" class="px-3 py-2 border-b-2 border-blue-600 text-blue-600">
+                Ubicaciones
+            </button>
+            <button onclick="cambiarSubpestanaConfig('bloques')" id="btn-cfg-bloques" class="px-3 py-2 text-slate-500 hover:text-slate-800">
+                Bloques
+            </button>
+            <button onclick="cambiarSubpestanaConfig('variedades')" id="btn-cfg-variedades" class="px-3 py-2 text-slate-500 hover:text-slate-800">
+                Variedades
+            </button>
+            <button onclick="cambiarSubpestanaConfig('grados')" id="btn-cfg-grados" class="px-3 py-2 text-slate-500 hover:text-slate-800">
+                Grados
+            </button>
+        </div>
+
+        <!-- Contenedor dinámico donde se agregan/eliminan elementos -->
+        <div class="space-y-4">
+            <div class="flex gap-2">
+                <input type="text" id="input-nuevo-item-cfg" placeholder="Agregar nuevo elemento..." class="flex-1 border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                <button onclick="agregarElementoConfig()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold rounded-lg shadow">
+                    + Agregar
+                </button>
+            </div>
+
+            <!-- Lista de elementos activos -->
+            <div class="border rounded-lg p-3 max-h-60 overflow-y-auto bg-slate-50 space-y-2" id="lista-items-config">
+                <!-- Se renderizan los items con su botón de eliminar desde configuracion.js -->
+            </div>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-3 border-t">
+            <button type="button" onclick="cerrarModalConfiguracion()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-lg text-sm font-semibold">
+                Cerrar
+            </button>
+        </div>
+    </div>
+</div>
+    <!-- SCRIPTS Y NAVEGACIÓN DE LA APLICACIÓN -->
     <script>
+        function cambiarPestana(pestana) {
+            ['inventario', 'cortadores', 'incompletos', 'produccion'].forEach(p => {
+                const el = document.getElementById(`pestana-${p}`);
+                const btn = document.getElementById(`btn-nav-${p}`);
+                if (el) el.classList.add('hidden');
+                if (btn) {
+                    btn.classList.remove('bg-blue-600', 'text-white');
+                    btn.classList.add('bg-slate-800', 'text-slate-200');
+                }
+            });
+
+            const activa = document.getElementById(`pestana-${pestana}`);
+            const btnActivo = document.getElementById(`btn-nav-${pestana}`);
+            if (activa) activa.classList.remove('hidden');
+            if (btnActivo) {
+                btnActivo.classList.remove('bg-slate-800', 'text-slate-200');
+                btnActivo.classList.add('bg-blue-600', 'text-white');
+            }
+        }
+
         function abrirModalEntrada() {
             document.getElementById('modal-entrada').classList.remove('hidden');
             const fechaInput = document.getElementById('se-fecha');
@@ -172,12 +467,56 @@
                 fechaInput.value = new Date().toISOString().split('T')[0];
             }
         }
+
+        function abrirModalSalida() {
+            document.getElementById('modal-salida').classList.remove('hidden');
+            const fechaInput = document.getElementById('ss-fecha');
+            if (fechaInput && !fechaInput.value) {
+                fechaInput.value = new Date().toISOString().split('T')[0];
+            }
+        }
+
         function cerrarModal(id) {
             document.getElementById(id).classList.add('hidden');
         }
-    </script>
+        let subpestanaActualConfig = 'ubicaciones';
+
+function abrirModalConfiguracion() {
+    const modal = document.getElementById('modal-configuracion');
+    if (modal) {
+        modal.classList.remove('hidden');
+        cambiarSubpestanaConfig('ubicaciones');
+    }
+}
+
+function cerrarModalConfiguracion() {
+    const modal = document.getElementById('modal-configuracion');
+    if (modal) modal.classList.add('hidden');
+}
+
+function cambiarSubpestanaConfig(seccion) {
+    subpestanaActualConfig = seccion;
+    ['ubicaciones', 'bloques', 'variedades', 'grados'].forEach(s => {
+        const btn = document.getElementById(`btn-cfg-${s}`);
+        if (btn) {
+            btn.className = s === seccion 
+                ? 'px-3 py-2 border-b-2 border-blue-600 text-blue-600 font-bold'
+                : 'px-3 py-2 text-slate-500 hover:text-slate-800 font-semibold';
+        }
+    });
     
-    <!-- Script principal de inventario, entradas y salidas -->
+    if (typeof cargarListaConfiguracion === 'function') {
+        cargarListaConfiguracion(seccion);
+    }
+}
+    </script>
+
+    <!-- MÓDULOS DE JAVASCRIPT -->
+    <script src="/js/configuracion.js"></script>
     <script src="/js/inventario.js"></script>
+    <script src="/js/salidas.js"></script>
+    <script src="/js/cortadores.js"></script>
+    <script src="/js/incompletos.js"></script>
+    <script src="/js/produccion.js"></script>
 </body>
 </html>
