@@ -101,6 +101,11 @@ async function guardarSalida(e) {
     } catch (error) {
         console.error('Error al guardar salida:', error);
     }
+
+    // Al final de la función guardarSalida:
+    if (typeof cargarInventario === 'function') {
+    cargarInventario();
+    }
 }
 
 async function eliminarSalida(id) {
