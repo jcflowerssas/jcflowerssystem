@@ -1,34 +1,29 @@
-let entradasGlobal = [];
-let salidasGlobal = [];
-
 document.addEventListener('DOMContentLoaded', () => {
     cargarInventario();
     cargarEntradas();
     cargarSalidas();
 });
 
-// Función para normalizar texto (evita fallos por mayúsculas, espacios o paréntesis)
 function normalizarTexto(txt) {
     if (!txt) return '';
-    return String(txt)
-        .toLowerCase()
-        .replace(/\(.*\)/g, '')
-        .trim();
+    return String(txt).toLowerCase().replace(/\(.*\)/g, '').trim();
 }
 
-// ----------------------------------------------------
-// 1. CARGAR Y RENDERIZAR ENTRADAS
-// ----------------------------------------------------
+// CARGAR Y RENDERIZAR ENTRADAS
 async function cargarEntradas() {
+    let entradas = [];
     try {
         const res = await fetch('/api/entradas');
         if (res.ok) {
-            entradasGlobal = await res.json();
-            renderizarEntradas();
+            entradas = await res.json();
+        } else {
+            entradas = JSON.parse(localStorage.getItem('app_entradas') || '[]');
         }
     } catch (err) {
-        console.warn('Error al cargar entradas desde el servidor:', err);
+        entradas = JSON.parse(localStorage.getItem('app_entradas') || '[]');
     }
+    window.entradasGlobal = entradas;
+    renderizarEntradas();
 }
 
 function renderizarEntradas() {
@@ -36,12 +31,13 @@ function renderizarEntradas() {
     if (!tbody) return;
     tbody.innerHTML = '';
 
-    if (!entradasGlobal || entradasGlobal.length === 0) {
+    const lista = window.entradasGlobal || [];
+    if (lista.length === 0) {
         tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-gray-400 italic">No hay registros de entradas.</td></tr>`;
         return;
     }
 
-    entradasGlobal.forEach(item => {
+    lista.forEach(item => {
         const totalTallos = Number(item.totalTallos) || (Number(item.tabacos || 0) * Number(item.tallosPorTabaco || 40)) || 0;
         const tr = document.createElement('tr');
         tr.className = 'hover:bg-slate-50 border-b text-slate-700 text-sm';
@@ -61,20 +57,25 @@ function renderizarEntradas() {
     });
 }
 
+// GUARDAR ENTRADA FLEXIBLE (Obtiene valores por ID o por select dentro de form-entrada)
 window.guardarEntrada = async function(event) {
     if (event) event.preventDefault();
 
-    const fecha = document.getElementById('se-fecha')?.value;
-    const ubicacion = document.getElementById('se-ubicacion')?.value;
-    const bloque = document.getElementById('se-bloque')?.value;
-    const variedad = document.getElementById('se-variedad')?.value;
-    const grado = document.getElementById('se-grado')?.value;
-    const tabacos = parseInt(document.getElementById('se-tabacos')?.value) || 0;
-    const tallosPorTabaco = parseInt(document.getElementById('se-tallos-tabaco')?.value) || 40;
+    const form = document.getElementById('form-entrada');
+    
+    // Lectura flexible de los campos del formulario
+    const fecha = document.getElementById('se-fecha')?.value || form?.querySelector('[type="date"]')?.value || new Date().toISOString().split('T')[0];
+    const ubicacion = document.getElementById('se-ubicacion')?.value || form?.querySelectorAll('select')[0]?.value || '';
+    const bloque = document.getElementById('se-bloque')?.value || form?.querySelectorAll('select')[1]?.value || '';
+    const variedad = document.getElementById('se-variedad')?.value || form?.querySelectorAll('select')[2]?.value || '';
+    const grado = document.getElementById('se-grado')?.value || form?.querySelectorAll('select')[3]?.value || '';
+    const tabacos = parseInt(document.getElementById('se-tabacos')?.value || form?.querySelector('input[type="number"]')?.value) || 0;
+    const selectTallos = document.getElementById('se-tallos-tabaco')?.value || form?.querySelectorAll('select')[4]?.value || '40';
+    const tallosPorTabaco = parseInt(selectTallos) || 40;
     const totalTallos = tabacos * tallosPorTabaco;
 
     if (!ubicacion || !variedad) {
-        alert('Por favor completa los campos obligatorios.');
+        alert('Por favor selecciona la Ubicación y la Variedad.');
         return;
     }
 
@@ -91,6 +92,7 @@ window.guardarEntrada = async function(event) {
         totalTallos
     };
 
+    // Intentar guardar en backend
     try {
         await fetch('/api/entradas', {
             method: 'POST',
@@ -98,12 +100,16 @@ window.guardarEntrada = async function(event) {
             body: JSON.stringify(nuevaEntrada)
         });
     } catch (err) {
-        console.warn('API /api/entradas no disponible, guardando localmente:', err);
+        console.warn('Backend /api/entradas no disponible, guardando en localStorage:', err);
     }
 
-    entradasGlobal.unshift(nuevaEntrada);
+    // Respaldo inmediato en localStorage
+    const entradasGuardadas = JSON.parse(localStorage.getItem('app_entradas') || '[]');
+    entradasGuardadas.unshift(nuevaEntrada);
+    localStorage.setItem('app_entradas', JSON.stringify(entradasGuardadas));
 
-    const form = document.getElementById('form-entrada');
+    window.entradasGlobal = entradasGuardadas;
+
     if (form) form.reset();
     if (typeof cerrarModal === 'function') cerrarModal('modal-entrada');
 
@@ -116,27 +122,30 @@ window.eliminarEntrada = async function(id) {
     try {
         await fetch(`/api/entradas/${id}`, { method: 'DELETE' });
     } catch (err) {
-        console.warn('Error al eliminar entrada del servidor:', err);
+        console.warn('Error al eliminar del servidor:', err);
     }
-    entradasGlobal = entradasGlobal.filter(e => String(e.id) !== String(id));
+    const entradasGuardadas = JSON.parse(localStorage.getItem('app_entradas') || '[]').filter(e => String(e.id) !== String(id));
+    localStorage.setItem('app_entradas', JSON.stringify(entradasGuardadas));
+    window.entradasGlobal = entradasGuardadas;
     renderizarEntradas();
     cargarInventario();
 };
 
-
-// ----------------------------------------------------
-// 2. CARGAR Y RENDERIZAR SALIDAS
-// ----------------------------------------------------
+// CARGAR Y RENDERIZAR SALIDAS
 async function cargarSalidas() {
+    let salidas = [];
     try {
         const res = await fetch('/api/salidas');
         if (res.ok) {
-            salidasGlobal = await res.json();
-            renderizarSalidas();
+            salidas = await res.json();
+        } else {
+            salidas = JSON.parse(localStorage.getItem('app_salidas') || '[]');
         }
     } catch (err) {
-        console.warn('Error al cargar salidas desde el servidor:', err);
+        salidas = JSON.parse(localStorage.getItem('app_salidas') || '[]');
     }
+    window.salidasGlobal = salidas;
+    renderizarSalidas();
 }
 
 function renderizarSalidas() {
@@ -144,12 +153,13 @@ function renderizarSalidas() {
     if (!tbody) return;
     tbody.innerHTML = '';
 
-    if (!salidasGlobal || salidasGlobal.length === 0) {
+    const lista = window.salidasGlobal || [];
+    if (lista.length === 0) {
         tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-gray-400 italic">No hay registros de salidas.</td></tr>`;
         return;
     }
 
-    salidasGlobal.forEach(item => {
+    lista.forEach(item => {
         const totalTallos = Number(item.totalTallos) || (Number(item.tabacos || 0) * Number(item.tallosPorTabaco || 40)) || 0;
         const tr = document.createElement('tr');
         tr.className = 'hover:bg-slate-50 border-b text-slate-700 text-sm';
@@ -169,91 +179,16 @@ function renderizarSalidas() {
     });
 }
 
-window.guardarSalida = async function(event) {
-    if (event) event.preventDefault();
-
-    const fecha = document.getElementById('ss-fecha')?.value;
-    const ubicacion = document.getElementById('ss-ubicacion')?.value;
-    const bloque = document.getElementById('ss-bloque')?.value;
-    const variedad = document.getElementById('ss-variedad')?.value;
-    const grado = document.getElementById('ss-grado')?.value;
-    const tabacos = parseInt(document.getElementById('ss-tabacos')?.value) || 0;
-    const tallosPorTabaco = parseInt(document.getElementById('ss-tallos-tabaco')?.value) || 40;
-    const totalTallos = tabacos * tallosPorTabaco;
-
-    if (!ubicacion || !variedad) {
-        alert('Por favor completa los campos obligatorios.');
-        return;
-    }
-
-    const nuevaSalida = {
-        id: Date.now().toString(),
-        fecha,
-        ubicacion,
-        bloque,
-        variedad,
-        tipo: variedad.toLowerCase().includes('freedom') ? 'Rojo' : 'Color',
-        grado,
-        tabacos,
-        tallosPorTabaco,
-        totalTallos
-    };
-
-    try {
-        await fetch('/api/salidas', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(nuevaSalida)
-        });
-    } catch (err) {
-        console.warn('API /api/salidas no disponible, guardando localmente:', err);
-    }
-
-    salidasGlobal.unshift(nuevaSalida);
-
-    const form = document.getElementById('form-salida');
-    if (form) form.reset();
-    if (typeof cerrarModal === 'function') cerrarModal('modal-salida');
-
-    renderizarSalidas();
-    cargarInventario();
-};
-
-window.eliminarSalida = async function(id) {
-    if (!confirm('¿Deseas eliminar este registro de salida?')) return;
-    try {
-        await fetch(`/api/salidas/${id}`, { method: 'DELETE' });
-    } catch (err) {
-        console.warn('Error al eliminar salida del servidor:', err);
-    }
-    salidasGlobal = salidasGlobal.filter(s => String(s.id) !== String(id));
-    renderizarSalidas();
-    cargarInventario();
-};
-
-
-// ----------------------------------------------------
-// 3. INVENTARIO PRINCIPAL Y TABLA RESUMEN (CÁLCULO Y DESCUENTOS)
-// ----------------------------------------------------
+// INVENTARIO PRINCIPAL (CÁLCULO NETO DE STOCK)
 window.cargarInventario = async function() {
     const tbody = document.getElementById('tabla-inventario-body');
 
-    try {
-        const [resE, resS] = await Promise.all([
-            fetch('/api/entradas').catch(() => null),
-            fetch('/api/salidas').catch(() => null)
-        ]);
-
-        if (resE && resE.ok) entradasGlobal = await resE.json();
-        if (resS && resS.ok) salidasGlobal = await resS.json();
-    } catch (err) {
-        console.warn('Error consultando servidor Railway:', err);
-    }
+    const entradas = window.entradasGlobal || JSON.parse(localStorage.getItem('app_entradas') || '[]');
+    const salidas = window.salidasGlobal || JSON.parse(localStorage.getItem('app_salidas') || '[]');
 
     const mapaStock = {};
 
-    // A. Sumar Entradas
-    (entradasGlobal || []).forEach(e => {
+    entradas.forEach(e => {
         const u = normalizarTexto(e.ubicacion);
         const b = normalizarTexto(e.bloque);
         const vNorm = normalizarTexto(e.variedad);
@@ -285,8 +220,7 @@ window.cargarInventario = async function() {
         mapaStock[clave].entradasTabacos += tabacos;
     });
 
-    // B. Restar Salidas
-    (salidasGlobal || []).forEach(s => {
+    salidas.forEach(s => {
         const u = normalizarTexto(s.ubicacion);
         const b = normalizarTexto(s.bloque);
         const vNorm = normalizarTexto(s.variedad);
@@ -318,11 +252,8 @@ window.cargarInventario = async function() {
     });
 
     const items = Object.values(mapaStock);
-
-    // C. Actualizar tarjetas de Resumen Superior
     actualizarTablaResumen(items);
 
-    // D. Renderizar la tabla principal de Inventario
     if (tbody) {
         tbody.innerHTML = '';
 
@@ -358,7 +289,6 @@ window.cargarInventario = async function() {
     }
 };
 
-// Función para rellenar la tabla del Resumen de Clasificación y Grado
 function actualizarTablaResumen(items) {
     const resumen = {
         rojo: { g50: 0, g40: 0, nacional: 0, totalTallos: 0, totalTabacos: 0 },
@@ -369,7 +299,7 @@ function actualizarTablaResumen(items) {
         const tallos = item.entradasTallos - item.salidasTallos;
         const tabacos = item.entradasTabacos - item.salidasTabacos;
         
-        if (tallos <= 0) return; // Solo considerar stock disponible positivo
+        if (tallos <= 0) return;
 
         const cat = item.tipo === 'Rojo' ? resumen.rojo : resumen.color;
         const g = item.grado.toLowerCase();
@@ -391,13 +321,11 @@ function actualizarTablaResumen(items) {
         if (el) el.innerText = texto;
     };
 
-    // Actualizar Freedom (Rojo)
     setTexto('resumen-rojo-g50', `${resumen.rojo.g50.toLocaleString()} tallos`);
     setTexto('resumen-rojo-g40', `${resumen.rojo.g40.toLocaleString()} tallos`);
     setTexto('resumen-rojo-nac', `${resumen.rojo.nacional.toLocaleString()} tallos`);
     setTexto('resumen-rojo-total', `${resumen.rojo.totalTallos.toLocaleString()} tallos`);
 
-    // Actualizar Colores
     setTexto('resumen-color-g50', `${resumen.color.g50.toLocaleString()} tallos`);
     setTexto('resumen-color-g40', `${resumen.color.g40.toLocaleString()} tallos`);
     setTexto('resumen-color-nac', `${resumen.color.nacional.toLocaleString()} tallos`);

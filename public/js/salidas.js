@@ -1,4 +1,3 @@
-let salidasGlobal = [];
 
 async function cargarSalidas() {
     try {
