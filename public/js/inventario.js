@@ -57,13 +57,12 @@ function renderizarEntradas() {
     });
 }
 
-// GUARDAR ENTRADA FLEXIBLE (Obtiene valores por ID o por select dentro de form-entrada)
+// GUARDAR ENTRADA FLEXIBLE
 window.guardarEntrada = async function(event) {
     if (event) event.preventDefault();
 
     const form = document.getElementById('form-entrada');
     
-    // Lectura flexible de los campos del formulario
     const fecha = document.getElementById('se-fecha')?.value || form?.querySelector('[type="date"]')?.value || new Date().toISOString().split('T')[0];
     const ubicacion = document.getElementById('se-ubicacion')?.value || form?.querySelectorAll('select')[0]?.value || '';
     const bloque = document.getElementById('se-bloque')?.value || form?.querySelectorAll('select')[1]?.value || '';
@@ -92,7 +91,6 @@ window.guardarEntrada = async function(event) {
         totalTallos
     };
 
-    // Intentar guardar en backend
     try {
         await fetch('/api/entradas', {
             method: 'POST',
@@ -103,7 +101,6 @@ window.guardarEntrada = async function(event) {
         console.warn('Backend /api/entradas no disponible, guardando en localStorage:', err);
     }
 
-    // Respaldo inmediato en localStorage
     const entradasGuardadas = JSON.parse(localStorage.getItem('app_entradas') || '[]');
     entradasGuardadas.unshift(nuevaEntrada);
     localStorage.setItem('app_entradas', JSON.stringify(entradasGuardadas));
@@ -258,7 +255,7 @@ window.cargarInventario = async function() {
         tbody.innerHTML = '';
 
         if (items.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="8" class="p-4 text-center text-gray-400 italic">No hay productos registrados en el inventario.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="10" class="p-4 text-center text-gray-400 italic">No hay productos registrados en el inventario.</td></tr>`;
             return;
         }
 
@@ -282,6 +279,9 @@ window.cargarInventario = async function() {
                 <td class="p-3 text-xs text-gray-500">${item.tallosPorTabaco} c/u</td>
                 <td class="p-3 font-extrabold ${tallosNetos < 0 ? 'text-rose-600' : 'text-emerald-900'}">
                     ${tallosNetos.toLocaleString()} tallos
+                </td>
+                <td class="p-3 text-center">
+                    <span class="text-xs text-slate-400 italic">Gestionado por entradas/salidas</span>
                 </td>
             `;
             tbody.appendChild(tr);
@@ -316,18 +316,28 @@ function actualizarTablaResumen(items) {
         cat.totalTabacos += tabacos;
     });
 
-    const setTexto = (id, texto) => {
+    const setTexto = (id, tallos, tabacos) => {
         const el = document.getElementById(id);
-        if (el) el.innerText = texto;
+        if (el) {
+            el.innerHTML = `${tallos.toLocaleString()} tallos<br><span class="text-gray-500 font-normal">(${tabacos} tabacos)</span>`;
+        }
     };
 
-    setTexto('resumen-rojo-g50', `${resumen.rojo.g50.toLocaleString()} tallos`);
-    setTexto('resumen-rojo-g40', `${resumen.rojo.g40.toLocaleString()} tallos`);
-    setTexto('resumen-rojo-nac', `${resumen.rojo.nacional.toLocaleString()} tallos`);
-    setTexto('resumen-rojo-total', `${resumen.rojo.totalTallos.toLocaleString()} tallos`);
+    // Actualizar Freedom (Rojo)
+    setTexto('rojo-g50', resumen.rojo.g50, 0);
+    setTexto('rojo-g40', resumen.rojo.g40, 0);
+    setTexto('rojo-nac', resumen.rojo.nacional, 0);
+    setTexto('rojo-total', resumen.rojo.totalTallos, resumen.rojo.totalTabacos);
 
-    setTexto('resumen-color-g50', `${resumen.color.g50.toLocaleString()} tallos`);
-    setTexto('resumen-color-g40', `${resumen.color.g40.toLocaleString()} tallos`);
-    setTexto('resumen-color-nac', `${resumen.color.nacional.toLocaleString()} tallos`);
-    setTexto('resumen-color-total', `${resumen.color.totalTallos.toLocaleString()} tallos`);
+    // Actualizar Colores
+    setTexto('color-g50', resumen.color.g50, 0);
+    setTexto('color-g40', resumen.color.g40, 0);
+    setTexto('color-nac', resumen.color.nacional, 0);
+    setTexto('color-total', resumen.color.totalTallos, resumen.color.totalTabacos);
+
+    // Totales Generales
+    setTexto('tot-g50', resumen.rojo.g50 + resumen.color.g50, 0);
+    setTexto('tot-g40', resumen.rojo.g40 + resumen.color.g40, 0);
+    setTexto('tot-nac', resumen.rojo.nacional + resumen.color.nacional, 0);
+    setTexto('tot-general', resumen.rojo.totalTallos + resumen.color.totalTallos, resumen.rojo.totalTabacos + resumen.color.totalTabacos);
 }
