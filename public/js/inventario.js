@@ -225,7 +225,22 @@ window.cargarInventario = async function() {
     }
 };
 
-function actualizarTablaResumen(items) {
+window.actualizarTablaResumen = async function() {
+    let entradas = [];
+    let salidas = [];
+
+    try {
+        const [resE, resS] = await Promise.all([
+            fetch('/api/entradas'),
+            fetch('/api/salidas')
+        ]);
+        if (resE.ok) entradas = await resE.json();
+        if (resS.ok) salidas = await resS.json();
+    } catch (e) {
+        entradas = JSON.parse(localStorage.getItem('app_entradas') || '[]');
+        salidas = JSON.parse(localStorage.getItem('app_salidas') || '[]');
+    }
+
     const resumen = {
         rojo: { 
             g50_tallos: 0, g50_tabacos: 0, 
@@ -241,8 +256,9 @@ function actualizarTablaResumen(items) {
         }
     };
 
-    if (Array.isArray(items)) {
-        items.forEach(item => {
+    // 1. Sumar Entradas
+    if (Array.isArray(entradas)) {
+        entradas.forEach(item => {
             const tallos = Number(item.totalTallos) || (Number(item.tabacos || 0) * Number(item.tallosPorTabaco || 40)) || 0;
             const tabacos = Number(item.tabacos) || 0;
 
@@ -271,6 +287,37 @@ function actualizarTablaResumen(items) {
         });
     }
 
+    // 2. Restar Salidas
+    if (Array.isArray(salidas)) {
+        salidas.forEach(item => {
+            const tallos = Number(item.totalTallos) || (Number(item.tabacos || 0) * Number(item.tallosPorTabaco || 40)) || 0;
+            const tabacos = Number(item.tabacos) || 0;
+
+            if (tallos <= 0) return;
+
+            const tipo = (item.tipo || '').toLowerCase();
+            const variedad = (item.variedad || '').toLowerCase();
+            const grado = (item.grado || '').trim().toLowerCase();
+
+            const esRojo = variedad.includes('freedom') || tipo === 'rojo';
+            const cat = esRojo ? resumen.rojo : resumen.color;
+
+            if (grado.includes('50')) {
+                cat.g50_tallos -= tallos;
+                cat.g50_tabacos -= tabacos;
+            } else if (grado.includes('40')) {
+                cat.g40_tallos -= tallos;
+                cat.g40_tabacos -= tabacos;
+            } else {
+                cat.nac_tallos -= tallos;
+                cat.nac_tabacos -= tabacos;
+            }
+
+            cat.totalTallos -= tallos;
+            cat.totalTabacos -= tabacos;
+        });
+    }
+
     const setTexto = (id, tallos, tabacos) => {
         const el = document.getElementById(id);
         if (el) {
@@ -295,4 +342,4 @@ function actualizarTablaResumen(items) {
     setTexto('tot-g40', resumen.rojo.g40_tallos + resumen.color.g40_tallos, resumen.rojo.g40_tabacos + resumen.color.g40_tabacos);
     setTexto('tot-nac', resumen.rojo.nac_tallos + resumen.color.nac_tallos, resumen.rojo.nac_tabacos + resumen.color.nac_tabacos);
     setTexto('tot-general', resumen.rojo.totalTallos + resumen.color.totalTallos, resumen.rojo.totalTabacos + resumen.color.totalTabacos);
-}
+};
