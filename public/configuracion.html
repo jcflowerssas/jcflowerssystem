@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configuración de Listas - Tomates San Sebastián</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 font-sans">
+
+    <!-- Barra de navegación inyectada automáticamente -->
+    <div id="nav-container"></div>
+
+    <main class="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
+        <div class="bg-slate-800 text-white p-4 rounded-2xl flex items-center justify-between">
+            <div>
+                <h2 class="text-lg font-bold">Configuración de Listas del Sistema</h2>
+                <p class="text-xs text-slate-300">Administra las opciones disponibles para ubicaciones, bloques, variedades, grados y cortadores.</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Tarjeta Ubicaciones -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                <h3 class="font-bold text-slate-800 border-b pb-2">📍 Ubicaciones</h3>
+                <form onsubmit="agregarItemConfig(event, 'ubicaciones')" class="flex gap-2">
+                    <input type="text" id="nuevo-ubicaciones" placeholder="Nueva ubicación..." required class="w-full border rounded-lg px-3 py-1.5 text-sm">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm font-bold">+</button>
+                </form>
+                <ul id="lista-ubicaciones" class="divide-y divide-slate-100 max-h-48 overflow-y-auto text-sm"></ul>
+            </div>
+
+            <!-- Tarjeta Bloques -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                <h3 class="font-bold text-slate-800 border-b pb-2">🟩 Bloques</h3>
+                <form onsubmit="agregarItemConfig(event, 'bloques')" class="flex gap-2">
+                    <input type="text" id="nuevo-bloques" placeholder="Nuevo bloque..." required class="w-full border rounded-lg px-3 py-1.5 text-sm">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm font-bold">+</button>
+                </form>
+                <ul id="lista-bloques" class="divide-y divide-slate-100 max-h-48 overflow-y-auto text-sm"></ul>
+            </div>
+
+            <!-- Tarjeta Variedades -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                <h3 class="font-bold text-slate-800 border-b pb-2">🌹 Variedades</h3>
+                <form onsubmit="agregarItemConfig(event, 'variedades')" class="flex gap-2">
+                    <input type="text" id="nuevo-variedades" placeholder="Nueva variedad..." required class="w-full border rounded-lg px-3 py-1.5 text-sm">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm font-bold">+</button>
+                </form>
+                <ul id="lista-variedades" class="divide-y divide-slate-100 max-h-48 overflow-y-auto text-sm"></ul>
+            </div>
+
+            <!-- Tarjeta Grados -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                <h3 class="font-bold text-slate-800 border-b pb-2">📏 Grados</h3>
+                <form onsubmit="agregarItemConfig(event, 'grados')" class="flex gap-2">
+                    <input type="text" id="nuevo-grados" placeholder="Nuevo grado..." required class="w-full border rounded-lg px-3 py-1.5 text-sm">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm font-bold">+</button>
+                </form>
+                <ul id="lista-grados" class="divide-y divide-slate-100 max-h-48 overflow-y-auto text-sm"></ul>
+            </div>
+
+            <!-- Tarjeta Cortadores -->
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                <h3 class="font-bold text-slate-800 border-b pb-2">✂️ Cortadores</h3>
+                <form onsubmit="agregarItemConfig(event, 'cortadores')" class="flex gap-2">
+                    <input type="text" id="nuevo-cortadores" placeholder="Nuevo cortador..." required class="w-full border rounded-lg px-3 py-1.5 text-sm">
+                    <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-sm font-bold">+</button>
+                </form>
+                <ul id="lista-cortadores" class="divide-y divide-slate-100 max-h-48 overflow-y-auto text-sm"></ul>
+            </div>
+        </div>
+    </main>
+
+    <!-- SCRIPTS -->
+    <script src="js/main.js"></script>
+    <script src="js/configuracion.js"></script>
+</body>
+</html>

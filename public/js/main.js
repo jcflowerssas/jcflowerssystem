@@ -1,19 +1,19 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const hoy = new Date().toISOString().split('T')[0];
-    ['input-fecha-ingreso', 'inc-fecha', 'sc-fecha', 'salida-fecha'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) el.value = hoy;
-    });
-
-    if (typeof cargarListasConfiguradas === 'function') {
-        cargarListasConfiguradas();
-    }
-    
-    // Iniciar mostrando la vista principal por defecto
-    if (typeof window.cambiarVista === 'function') {
-        window.cambiarVista('inventario');
-    }
+document.addEventListener("DOMContentLoaded", () => {
+    fetch('nav.html')
+        .then(response => {
+            if (!response.ok) throw new Error('No se pudo cargar la barra de navegación');
+            return response.text();
+        })
+        .then(html => {
+            const container = document.getElementById('nav-container');
+            if (container) {
+                container.innerHTML = html;
+            }
+        })
+        .catch(err => console.warn('Error cargando el menú:', err));
 });
+
+
 
 // Funciones globales para modales
 window.abrirModalEntrada = function() {

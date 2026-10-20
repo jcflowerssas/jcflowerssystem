@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Salidas de Producto - Tomates San Sebastián</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 font-sans">
+
+    <!-- Barra de navegación inyectada automáticamente -->
+    <div id="nav-container"></div>
+
+    <main class="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
+        <div class="flex items-center justify-between bg-rose-50 p-4 rounded-2xl border border-rose-200">
+            <div>
+                <h2 class="text-lg font-bold text-rose-900">Registro de Salidas de Producto</h2>
+                <p class="text-xs text-rose-700">Control de despacho y salidas de mercancía del cuarto frío.</p>
+            </div>
+            <button onclick="abrirModalSalida()" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg text-sm shadow">+ Registrar Salida</button>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm overflow-hidden border border-slate-200">
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-100 text-slate-700 text-xs uppercase font-bold tracking-wider border-b">
+                            <th class="p-3">Fecha</th>
+                            <th class="p-3">Ubicación</th>
+                            <th class="p-3">Bloque</th>
+                            <th class="p-3">Variedad</th>
+                            <th class="p-3">Tipo</th>
+                            <th class="p-3">Grado</th>
+                            <th class="p-3">Tabacos</th>
+                            <th class="p-3">Tallos/Tabaco</th>
+                            <th class="p-3">Total Tallos</th>
+                            <th class="p-3 text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-salidas-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <!-- MODAL REGISTRAR SALIDA -->
+    <div id="modal-salida" class="hidden fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl space-y-4">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="font-bold text-lg text-rose-900">Registrar Salida de Producto</h3>
+                <button onclick="cerrarModal('modal-salida')" class="text-gray-400 hover:text-gray-600 font-bold">✕</button>
+            </div>
+            <form id="form-salida" onsubmit="guardarSalida(event)" class="space-y-3">
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Fecha</label>
+                    <input type="date" id="salida-fecha" required class="w-full border rounded-lg px-3 py-2 text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Ubicación</label>
+                    <select id="salida-ubicacion" required class="w-full border rounded-lg px-3 py-2 text-sm bg-white"><option value="">-- Seleccione --</option></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Bloque</label>
+                    <select id="salida-bloque" required class="w-full border rounded-lg px-3 py-2 text-sm bg-white"><option value="">-- Seleccione --</option></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Variedad</label>
+                    <select id="salida-variedad" required class="w-full border rounded-lg px-3 py-2 text-sm bg-white"><option value="">-- Seleccione --</option></select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Grado</label>
+                    <select id="salida-grado" required class="w-full border rounded-lg px-3 py-2 text-sm bg-white"><option value="">-- Seleccione --</option></select>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Cantidad Tabacos</label>
+                        <input type="number" id="salida-tabacos" placeholder="0" required class="w-full border rounded-lg px-3 py-2 text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Tallos por Tabaco</label>
+                        <select id="salida-tallos" required class="w-full border rounded-lg px-3 py-2 text-sm bg-white">
+                            <option value="40">40 tallos</option>
+                            <option value="25">25 tallos</option>
+                            <option value="50">50 tallos</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 pt-3">
+                    <button type="button" onclick="cerrarModal('modal-salida')" class="px-4 py-2 bg-gray-200 rounded-lg text-sm font-bold">Cancelar</button>
+                    <button type="submit" class="px-4 py-2 bg-rose-600 text-white rounded-lg text-sm font-bold hover:bg-rose-700">Guardar Salida</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script src="js/salidas.js"></script>
+</body>
+</html>
