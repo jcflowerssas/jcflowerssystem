@@ -28,15 +28,16 @@
     <main class="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
         <!-- Resumen de Inventario -->
         <div class="bg-white rounded-2xl shadow-sm p-6 border border-slate-200">
-            <h2 class="text-lg font-bold text-slate-800 mb-4">Resumen de Inventario por Clasificación y Grado</h2>
+            <h2 class="text-lg font-bold text-slate-800 mb-4">Resumen de Inventario por Clasificación y Grado </h2>
             <div class="overflow-x-auto">
-                <table class="w-full text-left border-collapse min-w-[700px]">
+                <table class="w-full text-left border-collapse min-w-[800px]">
                     <thead>
                         <tr class="bg-slate-800 text-white text-xs uppercase font-semibold">
                             <th class="p-3 rounded-l-lg">Tipo / Variedad</th>
                             <th class="p-3 text-center">Grado 50</th>
                             <th class="p-3 text-center">Grado 40</th>
                             <th class="p-3 text-center bg-rose-900">Nacional</th>
+                            <th class="p-3 text-center bg-amber-700">Devoluciones</th>
                             <th class="p-3 text-center rounded-r-lg">Total (Tallos / Tabacos)</th>
                         </tr>
                     </thead>
@@ -46,6 +47,7 @@
                             <td id="rojo-g50" class="p-3 text-center font-bold text-blue-600 text-xs">0 tallos<br><span class="text-gray-500 font-normal">(0 tabacos)</span></td>
                             <td id="rojo-g40" class="p-3 text-center font-bold text-blue-600 text-xs">0 tallos<br><span class="text-gray-500 font-normal">(0 tabacos)</span></td>
                             <td id="rojo-nac" class="p-3 text-center font-bold text-rose-600 text-xs">0 tallos<br><span class="text-gray-500 font-normal">(0 tabacos)</span></td>
+                            <td id="rojo-dev" class="p-3 text-center font-bold text-amber-600 text-xs bg-amber-50/50">0 tallos<br><span class="text-gray-500 font-normal">(0 tabacos)</span></td>
                             <td id="rojo-total" class="p-3 text-center font-extrabold text-red-700 text-xs">0 tallos<br><span class="text-gray-500 font-normal">(0 tabacos)</span></td>
                         </tr>
                         <tr>
@@ -53,6 +55,7 @@
                             <td id="color-g50" class="p-3 text-center font-bold text-blue-600 text-xs">0 tallos<br><span class="text-gray-500 font-normal">(0 tabacos)</span></td>
                             <td id="color-g40" class="p-3 text-center font-bold text-blue-600 text-xs">0 tallos<br><span class="text-gray-500 font-normal">(0 tabacos)</span></td>
                             <td id="color-nac" class="p-3 text-center font-bold text-rose-600 text-xs">0 tallos<br><span class="text-gray-500 font-normal">(0 tabacos)</span></td>
+                            <td id="color-dev" class="p-3 text-center font-bold text-amber-600 text-xs bg-amber-50/50">0 tallos<br><span class="text-gray-500 font-normal">(0 tabacos)</span></td>
                             <td id="color-total" class="p-3 text-center font-extrabold text-amber-600 text-xs">0 tallos<br><span class="text-gray-500 font-normal">(0 tabacos)</span></td>
                         </tr>
                         <tr class="bg-slate-50 font-black text-slate-900">
@@ -60,6 +63,7 @@
                             <td id="tot-g50" class="p-3 text-center text-blue-700 text-xs">0 tallos<br><span class="text-gray-500 font-normal">(0 tabacos)</span></td>
                             <td id="tot-g40" class="p-3 text-center text-blue-700 text-xs">0 tallos<br><span class="text-gray-500 font-normal">(0 tabacos)</span></td>
                             <td id="tot-nac" class="p-3 text-center text-rose-700 text-xs">0 tallos<br><span class="text-gray-500 font-normal">(0 tabacos)</span></td>
+                            <td id="tot-dev" class="p-3 text-center text-amber-800 text-xs bg-amber-100/50">0 tallos<br><span class="text-gray-500 font-normal">(0 tabacos)</span></td>
                             <td id="tot-general" class="p-3 text-center text-indigo-900 text-sm">0 tallos<br><span class="text-gray-600 font-normal">(0 tabacos)</span></td>
                         </tr>
                     </tbody>
@@ -180,6 +184,7 @@
             </form>
         </div>
     </div>
+
 
     <script src="js/main.js"></script>
     <script src="js/inventario.js"></script>

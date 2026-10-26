@@ -2,6 +2,12 @@ document.addEventListener('DOMContentLoaded', () => {
     cargarDatosSalidas();
 });
 
+// Función para normalizar textos y evitar errores por tildes, mayúsculas o espacios
+function normalizarTexto(txt) {
+    if (!txt) return '';
+    return String(txt).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+}
+
 // Cargar entradas y salidas para calcular stock por estiba
 async function cargarDatosSalidas() {
     let entradas = [];
@@ -19,6 +25,10 @@ async function cargarDatosSalidas() {
         salidas = JSON.parse(localStorage.getItem('app_salidas') || '[]');
     }
 
+    // Deduplicar por ID
+    entradas = Array.from(new Map(entradas.map(item => [item.id, item])).values());
+    salidas = Array.from(new Map(salidas.map(item => [item.id, item])).values());
+
     window.entradasGlobal = entradas;
     window.salidasGlobal = salidas;
 
@@ -26,51 +36,62 @@ async function cargarDatosSalidas() {
     renderizarTablaSalidas(salidas);
 }
 
-// Calcular y renderizar tarjetas de estibas
-// Calcular y renderizar tarjetas de estibas restando correctamente las salidas
+// Calcular y renderizar tarjetas de estibas con control especial para Devoluciones
 function renderizarEstibas(entradas, salidas) {
     const grid = document.getElementById('grid-estibas');
     if (!grid) return;
 
-    // Agrupar inventario neto por Ubicación (Estiba) y Variedad
     const inventarioPorEstiba = {};
 
     // 1. Sumar Entradas
     entradas.forEach(item => {
         const ub = item.ubicacion || 'Sin Ubicación';
+        const ubNorm = normalizarTexto(ub);
+        const esDevolucion = ubNorm.includes('devolucion');
+
         if (!inventarioPorEstiba[ub]) {
             inventarioPorEstiba[ub] = { totalTallos: 0, totalTabacos: 0, variedades: {} };
         }
 
         const tallos = Math.abs(Number(item.totalTallos) || (Number(item.tabacos || 0) * Number(item.tallosPorTabaco || 40)) || 0);
         const tabacos = Math.abs(Number(item.tabacos) || 0);
-        const varNombre = item.variedad || 'General';
+        
+        const varNombre = esDevolucion ? (item.variedad || 'Todas') : (item.variedad || 'General');
 
         inventarioPorEstiba[ub].totalTallos += tallos;
         inventarioPorEstiba[ub].totalTabacos += tabacos;
 
         if (!inventarioPorEstiba[ub].variedades[varNombre]) {
-            inventarioPorEstiba[ub].variedades[varNombre] = { tallos: 0, tabacos: 0, grados: new Set() };
+            inventarioPorEstiba[ub].variedades[varNombre] = { tallos: 0, tabacos: 0 };
         }
         inventarioPorEstiba[ub].variedades[varNombre].tallos += tallos;
         inventarioPorEstiba[ub].variedades[varNombre].tabacos += tabacos;
-        if (item.grado) inventarioPorEstiba[ub].variedades[varNombre].grados.add(item.grado);
     });
 
-    // 2. Restar Salidas de forma estricta (asegurando valores absolutos positivos para la resta)
+    // 2. Restar Salidas de forma estricta y segura
     salidas.forEach(item => {
         const ub = item.ubicacion || 'Sin Ubicación';
+        const ubNorm = normalizarTexto(ub);
+        const esDevolucion = ubNorm.includes('devolucion');
+
         if (inventarioPorEstiba[ub]) {
             const tallos = Math.abs(Number(item.totalTallos) || (Number(item.tabacos || 0) * Number(item.tallosPorTabaco || 40)) || 0);
             const tabacos = Math.abs(Number(item.tabacos) || 0);
-            const varNombre = item.variedad || 'General';
+            const varNombre = esDevolucion ? (item.variedad || 'Todas') : (item.variedad || 'General');
 
-            inventarioPorEstiba[ub].totalTallos -= tallos;
-            inventarioPorEstiba[ub].totalTabacos -= tabacos;
+            inventarioPorEstiba[ub].totalTallos = Math.max(0, inventarioPorEstiba[ub].totalTallos - tallos);
+            inventarioPorEstiba[ub].totalTabacos = Math.max(0, inventarioPorEstiba[ub].totalTabacos - tabacos);
 
             if (inventarioPorEstiba[ub].variedades[varNombre]) {
-                inventarioPorEstiba[ub].variedades[varNombre].tallos -= tallos;
-                inventarioPorEstiba[ub].variedades[varNombre].tabacos -= tabacos;
+                inventarioPorEstiba[ub].variedades[varNombre].tallos = Math.max(0, inventarioPorEstiba[ub].variedades[varNombre].tallos - tallos);
+                inventarioPorEstiba[ub].variedades[varNombre].tabacos = Math.max(0, inventarioPorEstiba[ub].variedades[varNombre].tabacos - tabacos);
+            } else {
+                const keysVar = Object.keys(inventarioPorEstiba[ub].variedades);
+                if (keysVar.length > 0) {
+                    const primeraKey = keysVar[0];
+                    inventarioPorEstiba[ub].variedades[primeraKey].tallos = Math.max(0, inventarioPorEstiba[ub].variedades[primeraKey].tallos - tallos);
+                    inventarioPorEstiba[ub].variedades[primeraKey].tabacos = Math.max(0, inventarioPorEstiba[ub].variedades[primeraKey].tabacos - tabacos);
+                }
             }
         }
     });
@@ -135,15 +156,116 @@ function renderizarEstibas(entradas, salidas) {
                 </div>
             </div>
 
-            <div class="pt-4 mt-4 border-t border-slate-100">
-                <button onclick="abrirModalSalidaParaEstiba('${ub}')" class="w-full py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs shadow transition flex items-center justify-center gap-1">
-                    <span>📤</span> Retirar Producto de esta Estiba
+            <!-- BOTONES DUALES: RETIRO PARCIAL O VACIAR ESTIBA COMPLETA -->
+            <div class="pt-4 mt-4 border-t border-slate-100 grid grid-cols-2 gap-2">
+                <button onclick="abrirModalSalidaParaEstiba('${ub}')" class="py-2 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl text-xs shadow-sm transition flex items-center justify-center gap-1" title="Retirar cantidad o variedad específica">
+                    <span>🔍</span> Retiro Parcial
+                </button>
+                <button onclick="retirarEstibaCompleta('${ub}')" class="py-2 px-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-xl text-xs shadow transition flex items-center justify-center gap-1 ${estiba.totalTallos <= 0 ? 'opacity-40 cursor-not-allowed bg-rose-400' : ''}" ${estiba.totalTallos <= 0 ? 'disabled' : ''} title="Despachar toda la estiba de un golpe">
+                    <span>⚡</span> Vaciar Estiba
                 </button>
             </div>
         `;
         grid.appendChild(card);
     });
 }
+
+// Función para vaciar completamente una estiba con confirmación de seguridad
+window.retirarEstibaCompleta = async function(ubicacion) {
+    if (!confirm(`⚠️ ¿Estás completamente seguro de retirar TODO el contenido de "${ubicacion}"? Esta acción despachará la estiba completa.`)) {
+        return;
+    }
+
+    const entradas = window.entradasGlobal || [];
+    const salidas = window.salidasGlobal || [];
+
+    const entradasEstiba = entradas.filter(e => e.ubicacion === ubicacion);
+    if (entradasEstiba.length === 0) {
+        alert('Esta estiba no tiene registros activos.');
+        return;
+    }
+
+    const fechaHoy = new Date().toISOString().split('T')[0];
+    const itemsMap = {};
+
+    // Agrupar stock actual de la estiba por bloque, variedad y grado
+    entradasEstiba.forEach(e => {
+        const key = `${e.bloque || 'General'}_${e.variedad || 'General'}_${e.grado || 'General'}`;
+        const tallos = Number(e.totalTallos) || (Number(e.tabacos || 0) * Number(e.tallosPorTabaco || 40)) || 0;
+        const tabacos = Number(e.tabacos) || 0;
+        const tallosPorTabaco = Number(e.tallosPorTabaco) || 40;
+
+        if (!itemsMap[key]) {
+            itemsMap[key] = {
+                bloque: e.bloque || 'General',
+                variedad: e.variedad || 'General',
+                grado: e.grado || 'General',
+                tallos: 0,
+                tabacos: 0,
+                tallosPorTabaco: tallosPorTabaco
+            };
+        }
+        itemsMap[key].tallos += tallos;
+        itemsMap[key].tabacos += tabacos;
+    });
+
+    // Descontar salidas previas de esta estiba
+    salidas.forEach(s => {
+        if (s.ubicacion === ubicacion) {
+            const key = `${s.bloque || 'General'}_${s.variedad || 'General'}_${s.grado || 'General'}`;
+            const tallos = Number(s.totalTallos) || (Number(s.tabacos || 0) * Number(s.tallosPorTabaco || 40)) || 0;
+            const tabacos = Number(s.tabacos) || 0;
+
+            if (itemsMap[key]) {
+                itemsMap[key].tallos = Math.max(0, itemsMap[key].tallos - tallos);
+                itemsMap[key].tabacos = Math.max(0, itemsMap[key].tabacos - tabacos);
+            }
+        }
+    });
+
+    const nuevasSalidas = [];
+    Object.keys(itemsMap).forEach(key => {
+        const item = itemsMap[key];
+        if (item.tallos > 0) {
+            nuevasSalidas.push({
+                id: (Date.now() + Math.random()).toString(),
+                fecha: fechaHoy,
+                ubicacion: ubicacion,
+                bloque: item.bloque,
+                variedad: item.variedad,
+                grado: item.grado,
+                tabacos: item.tabacos,
+                tallosPorTabaco: item.tallosPorTabaco,
+                totalTallos: item.tallos
+            });
+        }
+    });
+
+    if (nuevasSalidas.length === 0) {
+        alert('La estiba ya se encuentra vacía o sin stock disponible.');
+        return;
+    }
+
+    let salidasGuardadas = JSON.parse(localStorage.getItem('app_salidas') || '[]');
+
+    for (const salida of nuevasSalidas) {
+        salidasGuardadas.unshift(salida);
+        try {
+            await fetch('/api/salidas', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(salida)
+            });
+        } catch (err) {
+            console.warn('Backend no disponible al vaciar estiba:', err);
+        }
+    }
+
+    localStorage.setItem('app_salidas', JSON.stringify(salidasGuardadas));
+
+    alert(`✅ Estiba "${ubicacion}" vaciada exitosamente.`);
+    cargarDatosSalidas();
+};
 
 // Renderizar tabla de historial de salidas
 function renderizarTablaSalidas(salidas) {
@@ -187,17 +309,13 @@ window.abrirModalSalidaParaEstiba = async function(ubicacionNombre) {
     const campoFecha = document.getElementById('ss-fecha');
     if (campoFecha) campoFecha.value = new Date().toISOString().split('T')[0];
 
-    // Cargar selects generales del sistema (bloques, grados, ubicaciones)
-    if (typeof poblarSelectsSalidas === 'function') {
-        await poblarSelectsSalidas();
-    }
-
-    // Preseleccionar la estiba
     const selectUbicacion = document.getElementById('ss-ubicacion');
     if (selectUbicacion) {
+        if (typeof poblarSelectsSalidas === 'function') {
+            await poblarSelectsSalidas();
+        }
         selectUbicacion.value = ubicacionNombre;
-        // Ejecutar el filtro de variedades para esa estiba
-        filtrarVariedadesPorEstiba();
+        actualizarFiltrosPorEstiba();
     }
 };
 
@@ -220,7 +338,6 @@ window.actualizarFiltrosPorEstiba = function() {
     const selectVariedad = document.getElementById('ss-variedad');
     const selectGrado = document.getElementById('ss-grado');
 
-    // Limpiar selects con mensajes por defecto
     if (selectBloque) selectBloque.innerHTML = '<option value="">-- Seleccione Bloque --</option>';
     if (selectVariedad) selectVariedad.innerHTML = '<option value="">-- Seleccione Variedad --</option>';
     if (selectGrado) selectGrado.innerHTML = '<option value="">-- Seleccione Grado --</option>';
@@ -231,7 +348,6 @@ window.actualizarFiltrosPorEstiba = function() {
     const variedadesEnEstiba = new Set();
     const gradosEnEstiba = new Set();
 
-    // Recorrer las entradas para extraer los datos únicos de esta estiba
     window.entradasGlobal.forEach(item => {
         if (item.ubicacion === estibaSeleccionada) {
             if (item.bloque) bloquesEnEstiba.add(item.bloque);
@@ -240,7 +356,6 @@ window.actualizarFiltrosPorEstiba = function() {
         }
     });
 
-    // Llenar select de Bloques
     bloquesEnEstiba.forEach(b => {
         const opt = document.createElement('option');
         opt.value = b;
@@ -248,7 +363,6 @@ window.actualizarFiltrosPorEstiba = function() {
         selectBloque.appendChild(opt);
     });
 
-    // Llenar select de Variedades
     variedadesEnEstiba.forEach(v => {
         const opt = document.createElement('option');
         opt.value = v;
@@ -256,47 +370,14 @@ window.actualizarFiltrosPorEstiba = function() {
         selectVariedad.appendChild(opt);
     });
 
-    // Llenar select de Grados
     gradosEnEstiba.forEach(g => {
         const opt = document.createElement('option');
         opt.value = g;
         opt.textContent = g;
         selectGrado.appendChild(opt);
     });
-
-    // Validar estados vacíos
-    if (bloquesEnEstiba.size === 0 && selectBloque) {
-        selectBloque.innerHTML = '<option value="">Sin bloques en esta estiba</option>';
-    }
-    if (variedadesEnEstiba.size === 0 && selectVariedad) {
-        selectVariedad.innerHTML = '<option value="">Sin variedades en esta estiba</option>';
-    }
-    if (gradosEnEstiba.size === 0 && selectGrado) {
-        selectGrado.innerHTML = '<option value="">Sin grados en esta estiba</option>';
-    }
 };
 
-window.abrirModalSalidaParaEstiba = async function(ubicacionNombre) {
-    const m = document.getElementById('modal-salida');
-    if (!m) return;
-
-    m.classList.remove('hidden');
-    const campoFecha = document.getElementById('ss-fecha');
-    if (campoFecha) campoFecha.value = new Date().toISOString().split('T')[0];
-
-    // Preseleccionar la estiba
-    const selectUbicacion = document.getElementById('ss-ubicacion');
-    if (selectUbicacion) {
-        // Asegurarnos de poblar la lista de ubicaciones primero si estuviera vacía
-        if (typeof poblarSelectsSalidas === 'function') {
-            await poblarSelectsSalidas();
-        }
-        selectUbicacion.value = ubicacionNombre;
-        
-        // Ejecutar el filtro cruzado de bloque, variedad y grado
-        actualizarFiltrosPorEstiba();
-    }
-};
 // Guardar Salida
 window.guardarSalida = async function(event) {
     if (event) event.preventDefault();
@@ -319,9 +400,9 @@ window.guardarSalida = async function(event) {
         id: Date.now().toString(),
         fecha,
         ubicacion,
-        bloque,
+        bloque: bloque || 'General',
         variedad,
-        grado,
+        grado: grado || 'Devolución / General',
         tabacos,
         tallosPorTabaco,
         totalTallos
@@ -337,14 +418,13 @@ window.guardarSalida = async function(event) {
         console.warn('Backend no disponible, guardando en localStorage:', err);
     }
 
-    const salidasGuardadas = JSON.parse(localStorage.getItem('app_salidas') || '[]');
+    let salidasGuardadas = JSON.parse(localStorage.getItem('app_salidas') || '[]');
     salidasGuardadas.unshift(nuevaSalida);
     localStorage.setItem('app_salidas', JSON.stringify(salidasGuardadas));
 
     if (typeof cerrarModal === 'function') cerrarModal('modal-salida');
     document.getElementById('form-salida')?.reset();
 
-    // Recargar datos
     cargarDatosSalidas();
 };
 

@@ -179,11 +179,10 @@ function renderizarSalidas() {
 window.cargarInventario = async function() {
     const tbody = document.getElementById('tabla-inventario-body');
 
-    // Cargar entradas registradas
     const entradas = window.entradasGlobal || JSON.parse(localStorage.getItem('app_entradas') || '[]');
 
-    // 1. Actualizar la tabla de resumen superior
-    actualizarTablaResumen(entradas);
+    // 1. Actualizar la tabla de resumen superior con la columna de Devoluciones separada
+    await actualizarTablaResumen();
 
     // 2. Renderizar la tabla de registros individuales con botón Eliminar
     if (tbody) {
@@ -241,82 +240,81 @@ window.actualizarTablaResumen = async function() {
         salidas = JSON.parse(localStorage.getItem('app_salidas') || '[]');
     }
 
+    // ⭐ ELIMINAR DUPLICADOS POR ID PARA EVITAR CONTEOS DOBLES
+    entradas = Array.from(new Map(entradas.map(item => [item.id, item])).values());
+    salidas = Array.from(new Map(salidas.map(item => [item.id, item])).values());
+
     const resumen = {
         rojo: { 
             g50_tallos: 0, g50_tabacos: 0, 
             g40_tallos: 0, g40_tabacos: 0, 
             nac_tallos: 0, nac_tabacos: 0, 
+            dev_tallos: 0, dev_tabacos: 0,
             totalTallos: 0, totalTabacos: 0 
         },
         color: { 
             g50_tallos: 0, g50_tabacos: 0, 
             g40_tallos: 0, g40_tabacos: 0, 
             nac_tallos: 0, nac_tabacos: 0, 
+            dev_tallos: 0, dev_tabacos: 0,
             totalTallos: 0, totalTabacos: 0 
         }
     };
 
-    // 1. Sumar Entradas
+    const procesarMovimiento = (item, esResta = false) => {
+        const tallos = Number(item.totalTallos) || (Number(item.tabacos || 0) * Number(item.tallosPorTabaco || 40)) || 0;
+        const tabacos = Number(item.tabacos) || 0;
+
+        if (tallos <= 0) return;
+
+        const tipo = (item.tipo || '').toLowerCase();
+        const variedad = (item.variedad || '').toLowerCase();
+        const grado = (item.grado || '').trim().toLowerCase();
+        const ubicacion = (item.ubicacion || item.estibaOrigen || '').toLowerCase();
+
+        const esRojo = variedad.includes('freedom') || tipo === 'rojo';
+        const cat = esRojo ? resumen.rojo : resumen.color;
+
+        const multiplicador = esResta ? -1 : 1;
+
+        if (ubicacion.includes('devolución') || ubicacion.includes('devoluciones') || grado.includes('devolución')) {
+            cat.dev_tallos += (tallos * multiplicador);
+            cat.dev_tabacos += (tabacos * multiplicador);
+        } else if (grado.includes('50')) {
+            cat.g50_tallos += (tallos * multiplicador);
+            cat.g50_tabacos += (tabacos * multiplicador);
+        } else if (grado.includes('40')) {
+            cat.g40_tallos += (tallos * multiplicador);
+            cat.g40_tabacos += (tabacos * multiplicador);
+        } else {
+            cat.nac_tallos += (tallos * multiplicador);
+            cat.nac_tabacos += (tabacos * multiplicador);
+        }
+
+        cat.totalTallos += (tallos * multiplicador);
+        cat.totalTabacos += (tabacos * multiplicador);
+    };
+
     if (Array.isArray(entradas)) {
-        entradas.forEach(item => {
-            const tallos = Number(item.totalTallos) || (Number(item.tabacos || 0) * Number(item.tallosPorTabaco || 40)) || 0;
-            const tabacos = Number(item.tabacos) || 0;
-
-            if (tallos <= 0) return;
-
-            const tipo = (item.tipo || '').toLowerCase();
-            const variedad = (item.variedad || '').toLowerCase();
-            const grado = (item.grado || '').trim().toLowerCase();
-
-            const esRojo = variedad.includes('freedom') || tipo === 'rojo';
-            const cat = esRojo ? resumen.rojo : resumen.color;
-
-            if (grado.includes('50')) {
-                cat.g50_tallos += tallos;
-                cat.g50_tabacos += tabacos;
-            } else if (grado.includes('40')) {
-                cat.g40_tallos += tallos;
-                cat.g40_tabacos += tabacos;
-            } else {
-                cat.nac_tallos += tallos;
-                cat.nac_tabacos += tabacos;
-            }
-
-            cat.totalTallos += tallos;
-            cat.totalTabacos += tabacos;
-        });
+        entradas.forEach(item => procesarMovimiento(item, false));
     }
 
-    // 2. Restar Salidas
     if (Array.isArray(salidas)) {
-        salidas.forEach(item => {
-            const tallos = Number(item.totalTallos) || (Number(item.tabacos || 0) * Number(item.tallosPorTabaco || 40)) || 0;
-            const tabacos = Number(item.tabacos) || 0;
-
-            if (tallos <= 0) return;
-
-            const tipo = (item.tipo || '').toLowerCase();
-            const variedad = (item.variedad || '').toLowerCase();
-            const grado = (item.grado || '').trim().toLowerCase();
-
-            const esRojo = variedad.includes('freedom') || tipo === 'rojo';
-            const cat = esRojo ? resumen.rojo : resumen.color;
-
-            if (grado.includes('50')) {
-                cat.g50_tallos -= tallos;
-                cat.g50_tabacos -= tabacos;
-            } else if (grado.includes('40')) {
-                cat.g40_tallos -= tallos;
-                cat.g40_tabacos -= tabacos;
-            } else {
-                cat.nac_tallos -= tallos;
-                cat.nac_tabacos -= tabacos;
-            }
-
-            cat.totalTallos -= tallos;
-            cat.totalTabacos -= tabacos;
-        });
+        salidas.forEach(item => procesarMovimiento(item, true));
     }
+
+    [resumen.rojo, resumen.color].forEach(cat => {
+        cat.g50_tallos = Math.max(0, cat.g50_tallos);
+        cat.g50_tabacos = Math.max(0, cat.g50_tabacos);
+        cat.g40_tallos = Math.max(0, cat.g40_tallos);
+        cat.g40_tabacos = Math.max(0, cat.g40_tabacos);
+        cat.nac_tallos = Math.max(0, cat.nac_tallos);
+        cat.nac_tabacos = Math.max(0, cat.nac_tabacos);
+        cat.dev_tallos = Math.max(0, cat.dev_tallos);
+        cat.dev_tabacos = Math.max(0, cat.dev_tabacos);
+        cat.totalTallos = Math.max(0, cat.totalTallos);
+        cat.totalTabacos = Math.max(0, cat.totalTabacos);
+    });
 
     const setTexto = (id, tallos, tabacos) => {
         const el = document.getElementById(id);
@@ -325,21 +323,21 @@ window.actualizarTablaResumen = async function() {
         }
     };
 
-    // Actualizar Freedom (Rojo)
     setTexto('rojo-g50', resumen.rojo.g50_tallos, resumen.rojo.g50_tabacos);
     setTexto('rojo-g40', resumen.rojo.g40_tallos, resumen.rojo.g40_tabacos);
     setTexto('rojo-nac', resumen.rojo.nac_tallos, resumen.rojo.nac_tabacos);
+    setTexto('rojo-dev', resumen.rojo.dev_tallos, resumen.rojo.dev_tabacos);
     setTexto('rojo-total', resumen.rojo.totalTallos, resumen.rojo.totalTabacos);
 
-    // Actualizar Colores
     setTexto('color-g50', resumen.color.g50_tallos, resumen.color.g50_tabacos);
     setTexto('color-g40', resumen.color.g40_tallos, resumen.color.g40_tabacos);
     setTexto('color-nac', resumen.color.nac_tallos, resumen.color.nac_tabacos);
+    setTexto('color-dev', resumen.color.dev_tallos, resumen.color.dev_tabacos);
     setTexto('color-total', resumen.color.totalTallos, resumen.color.totalTabacos);
 
-    // Totales Generales
     setTexto('tot-g50', resumen.rojo.g50_tallos + resumen.color.g50_tallos, resumen.rojo.g50_tabacos + resumen.color.g50_tabacos);
     setTexto('tot-g40', resumen.rojo.g40_tallos + resumen.color.g40_tallos, resumen.rojo.g40_tabacos + resumen.color.g40_tabacos);
     setTexto('tot-nac', resumen.rojo.nac_tallos + resumen.color.nac_tallos, resumen.rojo.nac_tabacos + resumen.color.nac_tabacos);
+    setTexto('tot-dev', resumen.rojo.dev_tallos + resumen.color.dev_tallos, resumen.rojo.dev_tabacos + resumen.color.dev_tabacos);
     setTexto('tot-general', resumen.rojo.totalTallos + resumen.color.totalTallos, resumen.rojo.totalTabacos + resumen.color.totalTabacos);
 };
