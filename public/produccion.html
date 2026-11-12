@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Producción por Bloque - Tomates San Sebastián</title>
+    <title>Producción - Tomates San Sebastián</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Incluir Chart.js para los gráficos -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-slate-100 min-h-screen text-slate-800 font-sans">
@@ -13,72 +12,107 @@
     <!-- Barra de navegación inyectada automáticamente -->
     <div id="nav-container"></div>
 
-    <main class="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
-        
-        <!-- Cabecera -->
-        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-            <div>
-                <h2 class="text-xl font-bold text-slate-800">Gráfica de Producción por Bloque</h2>
-                <p class="text-xs text-slate-500">Visualiza el rendimiento de cosecha filtrando por periodo temporal y bloques específicos.</p>
-            </div>
-        </div>
+    <main class="max-w-7xl mx-auto p-4 md:p-6 space-y-5">
 
-        <!-- PANEL DE FILTROS AVANZADOS -->
-        <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-            
-            <!-- 1. Filtro Temporal (Día, Semana, Mes) -->
+        <!-- PRODUCCIÓN DEL DÍA -->
+        <section class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+            <div class="flex flex-wrap items-end justify-between gap-3">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-800">Producción del día</h2>
+                    <p class="text-xs text-slate-400">Según las entradas registradas al cuarto frío en Inventario Principal.</p>
+                    <p id="dia-resumen" class="text-sm text-slate-500 mt-1"></p>
+                </div>
+                <div class="flex items-end gap-2">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Fecha</label>
+                        <input type="date" id="fecha-dia" onchange="renderizarDia()" class="border rounded-xl px-3 py-2 text-sm bg-slate-50 font-medium">
+                    </div>
+                    <button type="button" onclick="irAHoy()" class="px-3 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-sm font-bold">Hoy</button>
+                </div>
+            </div>
+            <div id="dia-detalle" class="overflow-x-auto"></div>
+        </section>
+
+        <!-- FILTROS -->
+        <section class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 items-end">
             <div>
                 <label class="block text-xs font-bold text-slate-600 mb-1">Rango Temporal</label>
                 <select id="filtro-tipo-temporal" onchange="cambiarTipoTemporal()" class="w-full border rounded-xl px-3 py-2 text-sm bg-slate-50 font-medium">
                     <option value="semana">Por Semana</option>
                     <option value="mes">Por Mes</option>
-                    <option value="dia">Por Día Específico</option>
+                    <option value="dia">Por Día</option>
                 </select>
             </div>
 
-            <!-- 2. Input Dinámico (Cambia según Día, Semana o Mes) -->
-            <div id="contenedor-dinamico-temporal">
-                <!-- Se inyecta dinámicamente con JS -->
+            <div>
+                <div id="per-dia" class="hidden">
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Fecha</label>
+                    <input type="date" id="input-dia" onchange="renderizarProduccion()" class="w-full border rounded-xl px-3 py-2 text-sm bg-slate-50 font-medium">
+                </div>
+                <div id="per-semana">
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Semana y Año</label>
+                    <div class="flex gap-2">
+                        <input type="number" id="input-semana" min="1" max="53" oninput="renderizarProduccion()" class="w-1/2 border rounded-xl px-3 py-2 text-sm bg-slate-50 font-bold text-center">
+                        <input type="number" id="input-anio" min="2020" max="2100" oninput="renderizarProduccion()" class="w-1/2 border rounded-xl px-3 py-2 text-sm bg-slate-50 font-medium text-center">
+                    </div>
+                </div>
+                <div id="per-mes" class="hidden">
+                    <label class="block text-xs font-bold text-slate-600 mb-1">Mes</label>
+                    <input type="month" id="input-mes" onchange="renderizarProduccion()" class="w-full border rounded-xl px-3 py-2 text-sm bg-slate-50 font-medium">
+                </div>
             </div>
 
-            <!-- 3. Filtro de Bloques (Múltiple / Individual / Todos) -->
             <div>
-                <label class="block text-xs font-bold text-slate-600 mb-1">Bloques a Visualizar</label>
+                <label class="block text-xs font-bold text-slate-600 mb-1">Variedad</label>
+                <select id="filtro-variedad" onchange="renderizarProduccion()" class="w-full border rounded-xl px-3 py-2 text-sm bg-slate-50 font-medium">
+                    <option value="">Todas las variedades</option>
+                </select>
+            </div>
+
+            <div id="dropdown-wrap">
+                <label class="block text-xs font-bold text-slate-600 mb-1">Bloques (uno o varios)</label>
                 <div class="relative">
-                    <button type="button" onclick="toggleDropdownBloques()" class="w-full border rounded-xl px-3 py-2 text-sm bg-slate-50 font-medium text-left flex justify-between items-center">
-                        <span id="texto-bloques-seleccionados">Todos los Bloques</span>
+                    <button type="button" onclick="toggleDropdownBloques()" class="w-full border rounded-xl px-3 py-2 text-sm bg-slate-50 font-medium text-left flex justify-between items-center gap-2">
+                        <span id="texto-bloques-seleccionados" class="truncate">Todos los Bloques</span>
                         <span class="text-xs">▼</span>
                     </button>
-                    <!-- Menú desplegable con checkboxes -->
-                    <div id="dropdown-bloques" class="hidden absolute z-10 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg p-3 space-y-2 max-h-48 overflow-y-auto">
+                    <div id="dropdown-bloques" class="hidden absolute z-10 mt-1 w-full bg-white border border-slate-200 rounded-xl shadow-lg p-3 space-y-2 max-h-56 overflow-y-auto">
                         <label class="flex items-center gap-2 text-xs font-bold text-slate-700 cursor-pointer border-b pb-1">
-                            <input type="checkbox" id="check-todos-bloques" onchange="seleccionarTodosBloques(this)" checked class="rounded text-emerald-600 w-4 h-4">
+                            <input type="checkbox" id="check-todos-bloques" onchange="seleccionarTodosBloques(this)" checked class="rounded w-4 h-4">
                             <span>Seleccionar Todos</span>
                         </label>
-                        <div id="lista-checkbox-bloques" class="space-y-1">
-                            <!-- Los bloques se cargan dinámicamente aquí -->
-                        </div>
+                        <div id="lista-checkbox-bloques" class="space-y-1"></div>
                     </div>
                 </div>
             </div>
 
-        </div>
-
-        <!-- SECCIÓN DEL GRÁFICO -->
-        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-4">
-            <div class="flex justify-between items-center border-b pb-3">
-                <h3 class="font-bold text-slate-700 text-sm">📈 Tendencia de Producción (Tallos Cosechados)</h3>
-                <span id="info-filtro-activo" class="text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full">Mostrando todos los bloques</span>
+            <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1">Comparar por</label>
+                <select id="filtro-comparar" onchange="renderizarProduccion()" class="w-full border rounded-xl px-3 py-2 text-sm bg-slate-50 font-medium">
+                    <option value="bloque">Bloque</option>
+                    <option value="variedad">Variedad</option>
+                </select>
             </div>
-            
-            <div class="relative h-96 w-full">
-                <canvas id="graficoProduccion"></canvas>
-            </div>
-        </div>
+        </section>
 
+        <!-- GRÁFICA -->
+        <section class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-3">
+            <div class="flex flex-wrap justify-between items-center gap-2 border-b pb-3">
+                <h3 class="font-bold text-slate-700 text-sm">Tallos cosechados</h3>
+                <span id="info-filtro-activo" class="text-xs font-semibold text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full"></span>
+            </div>
+            <p id="stats-periodo" class="text-sm text-slate-600"></p>
+            <div id="lienzo" class="relative h-80 w-full"><canvas id="graficoProduccion"></canvas></div>
+            <p id="sin-datos" class="hidden text-sm text-slate-400 py-8 text-center">No hay producción registrada con estos filtros.</p>
+        </section>
+
+        <!-- DETALLE DEL PERIODO -->
+        <section class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-3">
+            <h3 class="font-bold text-slate-700 text-sm">Detalle del periodo por bloque y variedad</h3>
+            <div id="detalle-periodo" class="overflow-x-auto"></div>
+        </section>
     </main>
 
-    <!-- SCRIPTS -->
     <script src="js/main.js"></script>
     <script src="js/produccion.js"></script>
 </body>

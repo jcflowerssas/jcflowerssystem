@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estibas - Tomates San Sebastián</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 font-sans">
+
+    <!-- Barra de navegación inyectada automáticamente -->
+    <div id="nav-container"></div>
+
+    <main class="max-w-7xl mx-auto p-4 md:p-6 space-y-5">
+
+        <!-- Cabecera y resumen -->
+        <div class="bg-teal-50 border border-teal-200 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
+            <div>
+                <h2 class="text-lg font-bold text-teal-900">Qué hay en cada estiba</h2>
+                <p id="resumen-estibas" class="text-sm text-teal-800">Cargando inventario...</p>
+            </div>
+            <a href="salidas.html" class="px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white font-bold rounded-lg text-sm shadow">Registrar salida</a>
+        </div>
+
+        <!-- Búsqueda y filtro -->
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap items-center gap-3">
+            <input type="search" id="buscar-estiba" oninput="renderizarEstibas()" placeholder="Buscar estiba, variedad, grado o bloque..." class="px-3 py-2 border border-slate-300 rounded-lg text-sm w-full md:w-80 focus:ring-2 focus:ring-teal-500 focus:outline-none">
+            <select id="filtro-estado" onchange="renderizarEstibas()" class="px-3 py-2 border border-slate-300 rounded-lg text-sm bg-white font-semibold">
+                <option value="todas">Todas las estibas</option>
+                <option value="stock">Solo con producto</option>
+                <option value="vacias">Solo vacías</option>
+            </select>
+        </div>
+
+        <!-- Tarjetas de estibas -->
+        <div id="grid-estibas" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+    </main>
+
+    <!-- SCRIPTS -->
+    <script src="js/main.js"></script>
+    <script src="js/estibas.js"></script>
+</body>
+</html>

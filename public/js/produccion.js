@@ -1,248 +1,256 @@
-let chartInstance = null;
+let registros = [];
+let bloquesConocidos = [];
+let variedadesConocidas = [];
+let grafico = null;
+
+const PALETA = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316', '#84cc16', '#6366f1', '#14b8a6'];
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const num = n => Math.round(n).toLocaleString('es-CO');
+const val = id => document.getElementById(id)?.value || '';
+const poner = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+const natural = (a, b) => String(a).localeCompare(String(b), 'es', { numeric: true });
+const suma = lista => lista.reduce((s, r) => s + r.tallos, 0);
+
+// ---------- Fechas (siempre en hora local, no UTC) ----------
+function fechaStr(y, m, d) { return new Date(Date.UTC(y, m, d)).toISOString().slice(0, 10); }
+function hoyLocal() { const d = new Date(); return fechaStr(d.getFullYear(), d.getMonth(), d.getDate()); }
+
+function semanaISO(str) {
+    const [y, m, d] = str.split('-').map(Number);
+    const f = new Date(Date.UTC(y, m - 1, d));
+    f.setUTCDate(f.getUTCDate() + 4 - (f.getUTCDay() || 7));
+    const ini = new Date(Date.UTC(f.getUTCFullYear(), 0, 1));
+    return { semana: Math.ceil(((f - ini) / 86400000 + 1) / 7), anio: f.getUTCFullYear() };
+}
+
+function fechasDeSemana(semana, anio) {
+    const dow = new Date(Date.UTC(anio, 0, 4)).getUTCDay() || 7;
+    const lunes = Date.UTC(anio, 0, 4 - (dow - 1) + (semana - 1) * 7);
+    return Array.from({ length: 7 }, (_, i) => new Date(lunes + i * 86400000).toISOString().slice(0, 10));
+}
+
+function fechasDeMes(ym) {
+    const [y, m] = ym.split('-').map(Number);
+    const n = new Date(Date.UTC(y, m, 0)).getUTCDate();
+    return Array.from({ length: n }, (_, i) => fechaStr(y, m - 1, i + 1));
+}
+
+// ---------- Carga de datos ----------
+// La producción sale de las entradas al cuarto frío (Inventario Principal)
+function normalizarEntradas(entradas) {
+    return entradas.map(e => ({
+        fecha: e.fecha || e.fechaIngreso,
+        bloque: e.bloque || 'Sin bloque',
+        variedad: e.variedad || 'Sin variedad',
+        tallos: Number(e.totalTallos) || (Number(e.tabacos || 0) * Number(e.tallosPorTabaco || 40)) || 0
+    })).filter(r => r.fecha && r.tallos > 0);
+}
+
+async function cargarProduccion() {
+    let entradas = [];
+    try {
+        const res = await fetch('/api/entradas');
+        if (res.ok) entradas = await res.json();
+    } catch (e) { /* se usa el respaldo local */ }
+    if (!entradas.length) entradas = JSON.parse(localStorage.getItem('app_entradas') || '[]');
+    entradas = Array.from(new Map(entradas.map(e => [e.id, e])).values());
+    registros = normalizarEntradas(entradas);
+
+    const listas = typeof obtenerListasConfiguracion === 'function' ? await obtenerListasConfiguracion() : {};
+    const unir = (a, b) => [...new Set([...(a || []), ...b])].sort(natural);
+    bloquesConocidos = unir(listas.bloques, registros.map(r => r.bloque));
+    variedadesConocidas = unir(listas.variedades, registros.map(r => r.variedad));
+
+    document.getElementById('filtro-variedad').innerHTML = '<option value="">Todas las variedades</option>' +
+        variedadesConocidas.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
+
+    document.getElementById('lista-checkbox-bloques').innerHTML = bloquesConocidos.map(b => `
+        <label class="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer hover:bg-slate-50 p-1 rounded">
+            <input type="checkbox" name="filtro-bloque-check" value="${esc(b)}" checked onchange="actualizarSeleccionBloques()" class="rounded w-4 h-4">
+            <span>${esc(b)}</span>
+        </label>`).join('');
+
+    cambiarTipoTemporal();
+    renderizarDia();
+}
 
 document.addEventListener('DOMContentLoaded', () => {
-    inicializarFiltrosProduccion();
-    cargarDatosYGraficar();
+    const hoy = hoyLocal();
+    const s = semanaISO(hoy);
+    poner('fecha-dia', hoy);
+    poner('input-dia', hoy);
+    poner('input-mes', hoy.slice(0, 7));
+    poner('input-semana', s.semana);
+    poner('input-anio', s.anio);
+    cargarProduccion();
 });
 
-// Inicializar los inputs temporales y la lista de bloques
-async function inicializarFiltrosProduccion() {
-    cambiarTipoTemporal();
-    await cargarCheckboxesBloques();
-}
+document.addEventListener('click', e => {
+    if (!e.target.closest('#dropdown-wrap')) document.getElementById('dropdown-bloques')?.classList.add('hidden');
+});
 
-// Cambiar el input temporal según se elija Día, Semana o Mes
-window.cambiarTipoTemporal = function() {
-    const tipo = document.getElementById('filtro-tipo-temporal')?.value;
-    const contenedor = document.getElementById('contenedor-dinamico-temporal');
-    if (!contenedor) return;
+// ---------- Filtro de bloques ----------
+const bloquesSeleccionados = () => [...document.querySelectorAll('input[name="filtro-bloque-check"]:checked')].map(c => c.value);
 
-    const fechaHoy = new Date().toISOString().split('T')[0];
-    const mesActual = fechaHoy.substring(0, 7); // YYYY-MM
+window.toggleDropdownBloques = () => document.getElementById('dropdown-bloques').classList.toggle('hidden');
 
-    if (tipo === 'dia') {
-        contenedor.innerHTML = `
-            <label class="block text-xs font-bold text-slate-600 mb-1">Seleccionar Fecha</label>
-            <input type="date" id="input-valor-temporal" value="${fechaHoy}" onchange="cargarDatosYGraficar()" class="w-full border rounded-xl px-3 py-2 text-sm bg-slate-50 font-medium">
-        `;
-    } else if (tipo === 'mes') {
-        contenedor.innerHTML = `
-            <label class="block text-xs font-bold text-slate-600 mb-1">Seleccionar Mes</label>
-            <input type="month" id="input-valor-temporal" value="${mesActual}" onchange="cargarDatosYGraficar()" class="w-full border rounded-xl px-3 py-2 text-sm bg-slate-50 font-medium">
-        `;
-    } else if (tipo === 'semana') {
-        contenedor.innerHTML = `
-            <label class="block text-xs font-bold text-slate-600 mb-1">Número de Semana (1 - 52)</label>
-            <input type="number" id="input-valor-temporal" min="1" max="52" value="43" placeholder="Ej. 43" oninput="cargarDatosYGraficar()" class="w-full border rounded-xl px-3 py-2 text-sm bg-slate-50 font-medium">
-        `;
-    }
-    cargarDatosYGraficar();
-};
-
-// Cargar opciones de bloques en el menú desplegable con checkboxes
-async function cargarCheckboxesBloques() {
-    let bloques = [];
-    try {
-        const res = await fetch('/api/configuracion');
-        if (res.ok) {
-            const data = await res.json();
-            bloques = data.bloques || [];
-        }
-    } catch (e) {
-        const local = JSON.parse(localStorage.getItem('app_configuracion_listas') || '{}');
-        bloques = local.bloques || ['Bloque 1', 'Bloque 2', 'Bloque 3', 'Bloque 4'];
-    }
-
-    const listaContainer = document.getElementById('lista-checkbox-bloques');
-    if (!listaContainer) return;
-
-    listaContainer.innerHTML = '';
-    bloques.forEach(b => {
-        listaContainer.innerHTML += `
-            <label class="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer hover:bg-slate-50 p-1 rounded">
-                <input type="checkbox" name="filtro-bloque-check" value="${b}" checked onchange="actualizarSeleccionBloques()" class="rounded text-emerald-600 w-4 h-4">
-                <span>${b}</span>
-            </label>
-        `;
-    });
-}
-
-window.toggleDropdownBloques = function() {
-    const drop = document.getElementById('dropdown-bloques');
-    if (drop) drop.classList.toggle('hidden');
-};
-
-window.seleccionarTodosBloques = function(master) {
-    const checkboxes = document.querySelectorAll('input[name="filtro-bloque-check"]');
-    checkboxes.forEach(cb => cb.checked = master.checked);
+window.seleccionarTodosBloques = function (master) {
+    document.querySelectorAll('input[name="filtro-bloque-check"]').forEach(c => c.checked = master.checked);
     actualizarSeleccionBloques();
 };
 
-window.actualizarSeleccionBloques = function() {
-    const checkboxes = document.querySelectorAll('input[name="filtro-bloque-check"]:checked');
-    const texto = document.getElementById('texto-bloques-seleccionados');
-    
-    if (checkboxes.length === 0) {
-        texto.textContent = "Ningún bloque seleccionado";
-    } else {
-        const nombres = Array.from(checkboxes).map(cb => cb.value);
-        texto.textContent = nombres.length === document.querySelectorAll('input[name="filtro-bloque-check"]').length ? "Todos los Bloques" : nombres.join(', ');
-    }
-    cargarDatosYGraficar();
+window.actualizarSeleccionBloques = function () {
+    const sel = bloquesSeleccionados();
+    const todos = sel.length === bloquesConocidos.length;
+    document.getElementById('check-todos-bloques').checked = todos;
+    document.getElementById('texto-bloques-seleccionados').textContent =
+        sel.length === 0 ? 'Ningún bloque seleccionado' : todos ? 'Todos los Bloques' : sel.join(', ');
+    renderizarProduccion();
 };
 
-// Función auxiliar para calcular el número de semana de una fecha
-function obtenerNumeroSemana(d) {
-    d = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
-    d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
-    const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-    const weekNo = Math.ceil((((d - yearStart) / 86400000) + 1)/7);
-    return weekNo;
+window.cambiarTipoTemporal = function () {
+    const tipo = val('filtro-tipo-temporal');
+    document.getElementById('per-dia').classList.toggle('hidden', tipo !== 'dia');
+    document.getElementById('per-semana').classList.toggle('hidden', tipo !== 'semana');
+    document.getElementById('per-mes').classList.toggle('hidden', tipo !== 'mes');
+    renderizarProduccion();
+};
+
+// ---------- Tabla bloque x variedad ----------
+function htmlMatriz(lista) {
+    if (!lista.length) return '';
+    const celdas = {}, totB = {}, totV = {};
+    let total = 0;
+    lista.forEach(r => {
+        const c = celdas[r.bloque + '||' + r.variedad] = celdas[r.bloque + '||' + r.variedad] || { t: 0 };
+        c.t += r.tallos;
+        totB[r.bloque] = (totB[r.bloque] || 0) + r.tallos;
+        totV[r.variedad] = (totV[r.variedad] || 0) + r.tallos;
+        total += r.tallos;
+    });
+    const bloques = Object.keys(totB).sort(natural);
+    const variedades = Object.keys(totV).sort((a, b) => totV[b] - totV[a]);
+    const th = 'p-2.5 text-right text-xs font-bold text-slate-600';
+
+    const filas = bloques.map(b => `
+        <tr class="border-b hover:bg-slate-50">
+            <td class="p-2.5 font-bold text-slate-800">${esc(b)}</td>
+            ${variedades.map(v => {
+                const c = celdas[b + '||' + v];
+                return `<td class="p-2.5 text-right">${c ? num(c.t) : '<span class="text-slate-300">–</span>'}</td>`;
+            }).join('')}
+            <td class="p-2.5 text-right font-extrabold text-emerald-800">${num(totB[b])}</td>
+        </tr>`).join('');
+
+    return `
+        <table class="w-full text-sm border-collapse min-w-[480px]">
+            <thead>
+                <tr class="bg-slate-100 border-b">
+                    <th class="p-2.5 text-left text-xs font-bold text-slate-600">Bloque</th>
+                    ${variedades.map(v => `<th class="${th}">${esc(v)}</th>`).join('')}
+                    <th class="${th}">Total</th>
+                </tr>
+            </thead>
+            <tbody>${filas}</tbody>
+            <tfoot>
+                <tr class="bg-slate-50 font-extrabold border-t-2">
+                    <td class="p-2.5">Total</td>
+                    ${variedades.map(v => `<td class="p-2.5 text-right">${num(totV[v])}</td>`).join('')}
+                    <td class="p-2.5 text-right text-emerald-800">${num(total)}</td>
+                </tr>
+            </tfoot>
+        </table>`;
 }
 
-async function cargarDatosYGraficar() {
-    let cortes = [];
-    
-    // 1. Intentar cargar desde la API del servidor
-    try {
-        const res = await fetch('/api/cortes');
-        if (res.ok) {
-            const data = await res.json();
-            if (Array.isArray(data) && data.length > 0) {
-                cortes = data;
-            }
-        }
-    } catch (e) {
-        console.warn('API cortes no disponible, buscando en almacenamiento local...');
+// ---------- Producción del día ----------
+window.irAHoy = function () { poner('fecha-dia', hoyLocal()); renderizarDia(); };
+
+window.renderizarDia = function () {
+    const fecha = val('fecha-dia');
+    const lista = registros.filter(r => r.fecha === fecha);
+    const total = suma(lista);
+    const resumen = document.getElementById('dia-resumen');
+    const detalle = document.getElementById('dia-detalle');
+
+    if (!lista.length) {
+        resumen.textContent = '';
+        detalle.innerHTML = '<p class="text-sm text-slate-400 py-3">No hay entradas al cuarto frío registradas este día. Regístralas en <a href="index.html" class="font-bold text-emerald-700 underline">Inventario Principal</a>.</p>';
+        return;
+    }
+    const nBloques = new Set(lista.map(r => r.bloque)).size;
+    const nVariedades = new Set(lista.map(r => r.variedad)).size;
+    resumen.innerHTML = `<span class="text-3xl font-black text-slate-900">${num(total)}</span> tallos en ${nBloques} bloque${nBloques > 1 ? 's' : ''} y ${nVariedades} variedad${nVariedades > 1 ? 'es' : ''}`;
+    detalle.innerHTML = htmlMatriz(lista);
+};
+
+// ---------- Gráfica y detalle del periodo ----------
+window.renderizarProduccion = function () {
+    if (!document.getElementById('graficoProduccion')) return;
+    const tipo = val('filtro-tipo-temporal');
+    const dim = val('filtro-comparar') || 'bloque';
+    const variedad = val('filtro-variedad');
+    const bloques = bloquesSeleccionados();
+
+    let fechas;
+    if (tipo === 'dia') fechas = [val('input-dia')];
+    else if (tipo === 'mes') fechas = fechasDeMes(val('input-mes') || hoyLocal().slice(0, 7));
+    else fechas = fechasDeSemana(parseInt(val('input-semana')) || 1, parseInt(val('input-anio')) || new Date().getFullYear());
+
+    const enPeriodo = new Set(fechas);
+    const lista = registros.filter(r => enPeriodo.has(r.fecha) && bloques.includes(r.bloque) && (!variedad || r.variedad === variedad));
+
+    document.getElementById('info-filtro-activo').textContent =
+        `${variedad || 'Todas las variedades'}, ${bloques.length === bloquesConocidos.length ? 'todos los bloques' : bloques.length + ' bloque(s)'}`;
+    document.getElementById('detalle-periodo').innerHTML = htmlMatriz(lista);
+
+    if (grafico) grafico.destroy();
+    grafico = null;
+    document.getElementById('lienzo').classList.toggle('hidden', !lista.length);
+    document.getElementById('sin-datos').classList.toggle('hidden', lista.length > 0);
+
+    if (!lista.length) {
+        document.getElementById('stats-periodo').textContent = '';
+        return;
     }
 
-    // 2. Si la API está vacía, buscar en todas las llaves posibles de localStorage
-    if (!cortes || cortes.length === 0) {
-        const posiblesLlaves = ['app_cortes', 'app_entradas', 'cortes', 'entradas'];
-        for (const llave of posiblesLlaves) {
-            const datosLocal = localStorage.getItem(llave);
-            if (datosLocal) {
-                try {
-                    const parsed = JSON.parse(datosLocal);
-                    if (Array.isArray(parsed) && parsed.length > 0) {
-                        cortes = parsed;
-                        console.log(`✅ Datos encontrados en localStorage bajo la llave: "${llave}"`, cortes);
-                        break;
-                    }
-                } catch (err) {
-                    console.warn(`Error al parsear ${llave}:`, err);
-                }
-            }
-        }
-    }
+    const total = suma(lista);
+    const porDia = {};
+    lista.forEach(r => porDia[r.fecha] = (porDia[r.fecha] || 0) + r.tallos);
+    const dias = Object.keys(porDia);
+    const mejor = dias.reduce((a, b) => porDia[a] >= porDia[b] ? a : b);
+    document.getElementById('stats-periodo').innerHTML = tipo === 'dia'
+        ? `Total: <b>${num(total)}</b> tallos`
+        : `Total: <b>${num(total)}</b> tallos. Promedio: <b>${num(total / dias.length)}</b> por día con entradas. Mejor día: <b>${mejor}</b> con <b>${num(porDia[mejor])}</b>.`;
 
-    console.log("📊 Total de registros cargados para el gráfico:", cortes);
+    const grupos = [...new Set(lista.map(r => r[dim]))].sort(natural);
+    const color = (g, i) => dim === 'variedad' && /freedom/i.test(g) ? '#dc2626' : PALETA[i % PALETA.length];
+    const canvas = document.getElementById('graficoProduccion');
 
-    const tipoTemporal = document.getElementById('filtro-tipo-temporal')?.value;
-    const valorTemporal = document.getElementById('input-valor-temporal')?.value;
-    
-    const checkboxesSeleccionados = document.querySelectorAll('input[name="filtro-bloque-check"]:checked');
-    const bloquesPermitidos = Array.from(checkboxesSeleccionados).map(cb => cb.value);
-
-    // 3. Filtrar los registros según el periodo y los bloques seleccionados
-    const cortesFiltrados = cortes.filter(item => {
-        const fechaStr = item.fecha || item.fechaIngreso || '';
-        const bloqueStr = item.bloque || '';
-        
-        if (!fechaStr || !bloqueStr) return false;
-        if (bloquesPermitidos.length > 0 && !bloquesPermitidos.includes(bloqueStr)) return false;
-
-        if (tipoTemporal === 'dia') {
-            return fechaStr === valorTemporal;
-        } else if (tipoTemporal === 'mes') {
-            const mesItem = fechaStr.substring(0, 7); // Formato YYYY-MM
-            return mesItem === valorTemporal;
-        } else if (tipoTemporal === 'semana') {
-            const fechaItem = new Date(fechaStr + 'T00:00:00');
-            if (isNaN(fechaItem.getTime())) return false;
-            const semanaItem = obtenerNumeroSemana(fechaItem);
-            return Number(semanaItem) === Number(valorTemporal);
-        }
-        return true;
-    });
-
-    console.log("🔍 Registros filtrados después de aplicar los filtros:", cortesFiltrados);
-
-    // 4. Extraer etiquetas únicas (fechas) ordenadas cronológicamente
-    const etiquetasSet = new Set();
-    cortesFiltrados.forEach(c => etiquetasSet.add(c.fecha || c.fechaIngreso));
-    const etiquetas = Array.from(etiquetasSet).sort();
-
-    const coloresPalette = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
-    let colorIndex = 0;
-
-    const datasets = bloquesPermitidos.map(bloque => {
-        const color = coloresPalette[colorIndex % coloresPalette.length];
-        colorIndex++;
-
-        const dataPuntos = etiquetas.map(fecha => {
-            const registrosMismaFechaBloque = cortesFiltrados.filter(c => (c.fecha || c.fechaIngreso) === fecha && c.bloque === bloque);
-            let totalTallos = 0;
-            registrosMismaFechaBloque.forEach(r => {
-                totalTallos += Number(r.totalTallos) || (Number(r.tabacos || 0) * Number(r.tallosPorTabaco || 40)) || 0;
-            });
-            return totalTallos;
+    if (tipo === 'dia') {
+        grafico = new Chart(canvas, {
+            type: 'bar',
+            data: { labels: grupos, datasets: [{ label: 'Tallos', data: grupos.map(g => Math.round(suma(lista.filter(r => r[dim] === g)))), backgroundColor: grupos.map(color) }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, title: { display: true, text: 'Tallos' } } } }
         });
-
-        return {
-            label: bloque,
-            data: dataPuntos,
-            borderColor: color,
-            backgroundColor: color,
-            borderWidth: 2,
-            pointRadius: 6,
-            pointHoverRadius: 8,
-            fill: false,
-            tension: 0.1
-        };
-    });
-
-    renderizarGrafico(etiquetas.length > 0 ? etiquetas : ['Sin registros en este periodo'], datasets);
-}
-
-// Renderizar o actualizar la gráfica usando Chart.js
-function renderizarGrafico(etiquetas, datasets) {
-    const ctx = document.getElementById('graficoProduccion')?.getContext('2d');
-    if (!ctx) return;
-
-    if (chartInstance) {
-        chartInstance.destroy();
+        return;
     }
 
-    chartInstance = new Chart(ctx, {
-        type: 'line', // Tipo línea uniendo puntos de dispersión
+    const etiqueta = f => tipo === 'mes' ? String(Number(f.slice(8))) : new Date(f + 'T00:00:00').toLocaleDateString('es-CO', { weekday: 'short', day: 'numeric' });
+    grafico = new Chart(canvas, {
+        type: 'line',
         data: {
-            labels: etiquetas.length > 0 ? etiquetas : ['Sin datos'],
-            datasets: datasets.length > 0 ? datasets : [{ label: 'Sin registros', data: [0], borderColor: '#cbd5e1' }]
+            labels: fechas.map(etiqueta),
+            datasets: grupos.map((g, i) => ({
+                label: g,
+                data: fechas.map(f => Math.round(suma(lista.filter(r => r.fecha === f && r[dim] === g)))),
+                borderColor: color(g, i), backgroundColor: color(g, i), borderWidth: 2, pointRadius: 4, tension: 0.2
+            }))
         },
         options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom',
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    title: {
-                        display: true,
-                        text: 'Total de Tallos Cosechados'
-                    }
-                },
-                x: {
-                    title: {
-                        display: true,
-                        text: 'Fecha'
-                    }
-                }
-            }
+            responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { position: 'bottom' } },
+            scales: { y: { beginAtZero: true, title: { display: true, text: 'Tallos' } }, x: { title: { display: true, text: tipo === 'mes' ? 'Día del mes' : 'Día' } } }
         }
     });
-}
+};
