@@ -176,13 +176,37 @@ function renderizarSalidas() {
     });
 }
 
-window.cargarInventario = async function() {
+// Tabla de registros: más recientes primero, con filtros y límite de filas
+const LIMITE_TABLA = 50;
+window.mostrarTodoInventario = false;
+
+const sinAcentos = t => String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
+function listaTabla(entradas) {
+    const q = sinAcentos(document.getElementById('input-buscar')?.value).trim();
+    const clase = document.getElementById('filtro-clasificacion')?.value || 'todos';
+    const grado = (document.getElementById('filtro-grado')?.value || 'todos').toLowerCase();
+
+    const filtradas = entradas.filter(item => {
+        const esRojo = (item.variedad || '').toLowerCase().includes('freedom') || (item.tipo || '').toLowerCase() === 'rojo';
+        if (clase === 'freedom' && !esRojo) return false;
+        if (clase === 'colores' && esRojo) return false;
+        if (grado !== 'todos' && String(item.grado || '').trim().toLowerCase() !== grado) return false;
+        if (!q) return true;
+        return sinAcentos([item.fecha, item.ubicacion, item.bloque, item.variedad, item.grado].join(' ')).includes(q);
+    }).sort((a, b) => String(b.fecha || '').localeCompare(String(a.fecha || '')) || (Number(b.id) || 0) - (Number(a.id) || 0));
+
+    window._totalFiltradas = filtradas.length;
+    return window.mostrarTodoInventario ? filtradas : filtradas.slice(0, LIMITE_TABLA);
+}
+
+window.cargarInventario = async function(opciones) {
     const tbody = document.getElementById('tabla-inventario-body');
 
     const entradas = window.entradasGlobal || JSON.parse(localStorage.getItem('app_entradas') || '[]');
 
     // 1. Actualizar la tabla de resumen superior con la columna de Devoluciones separada
-    await actualizarTablaResumen();
+    if (!(opciones && opciones.soloTabla)) await actualizarTablaResumen();
 
     // 2. Renderizar la tabla de registros individuales con botón Eliminar
     if (tbody) {
@@ -193,7 +217,8 @@ window.cargarInventario = async function() {
             return;
         }
 
-        entradas.forEach(item => {
+        const mostradas = listaTabla(entradas);
+        mostradas.forEach(item => {
             const tallosTotales = Number(item.totalTallos) || (Number(item.tabacos || 0) * Number(item.tallosPorTabaco || 40)) || 0;
             const esRojo = (item.variedad || '').toLowerCase().includes('freedom') || (item.tipo && item.tipo.toLowerCase() === 'rojo');
 
@@ -221,8 +246,26 @@ window.cargarInventario = async function() {
             `;
             tbody.appendChild(tr);
         });
+
+        const total = window._totalFiltradas || 0;
+        const fila = document.createElement('tr');
+        if (total === 0) {
+            fila.innerHTML = '<td colspan="10" class="p-4 text-center text-gray-400 italic">No hay registros con esos filtros.</td>';
+            tbody.appendChild(fila);
+        } else if (total > mostradas.length) {
+            fila.innerHTML = `<td colspan="10" class="p-3 text-center"><button type="button" onclick="window.mostrarTodoInventario = true; cargarInventario({ soloTabla: true })" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-lg text-xs">Mostrar todas (${total})</button></td>`;
+            tbody.appendChild(fila);
+        }
     }
 };
+
+// Búsqueda y filtros de la tabla: solo vuelven a dibujar la tabla (el resumen no cambia)
+document.addEventListener('DOMContentLoaded', () => {
+    const refrescar = () => { window.mostrarTodoInventario = false; cargarInventario({ soloTabla: true }); };
+    document.getElementById('input-buscar')?.addEventListener('input', refrescar);
+    document.getElementById('filtro-clasificacion')?.addEventListener('change', refrescar);
+    document.getElementById('filtro-grado')?.addEventListener('change', refrescar);
+});
 
 window.actualizarTablaResumen = async function() {
     let entradas = [];
@@ -319,7 +362,7 @@ window.actualizarTablaResumen = async function() {
     const setTexto = (id, tallos, tabacos) => {
         const el = document.getElementById(id);
         if (el) {
-            el.innerHTML = `${tallos.toLocaleString()} tallos<br><span class="text-gray-500 font-normal">(${tabacos.toLocaleString()} tabacos)</span>`;
+            el.innerHTML = `${tallos.toLocaleString()} <span class="text-slate-400 font-normal">(${tabacos.toLocaleString()})</span>`;
         }
     };
 
