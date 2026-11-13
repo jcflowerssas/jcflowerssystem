@@ -1,0 +1,55 @@
+[
+  {
+    "id": "1794571146651",
+    "numero": "1",
+    "fecha": "2026-11-13",
+    "clienteId": "1794571012003",
+    "cliente": {
+      "nombre": "Farms Connect",
+      "documento": "79710974",
+      "direccion": "aeropuerto",
+      "telefono": "3506779723"
+    },
+    "recibe": "Agencia de carga",
+    "documentoRecibe": "",
+    "pedido": "",
+    "despachadoPor": "Stiven Vela",
+    "transportadoPor": "Jeison Buitrago",
+    "detalle": "variedad",
+    "observaciones": "Se entrega en aeropuerto",
+    "lineas": [
+      {
+        "ubicacion": "Estiba 3 Color Exportable",
+        "variedad": "Frutteto",
+        "grado": "Grado 50",
+        "bloque": "Bloque 2",
+        "tabacos": 1,
+        "tallosPorTabaco": 25,
+        "totalTallos": 25
+      },
+      {
+        "ubicacion": "Estiba 3 Color Exportable",
+        "variedad": "Moody Blue",
+        "grado": "Grado 50",
+        "bloque": "Bloque 2",
+        "tabacos": 1,
+        "tallosPorTabaco": 25,
+        "totalTallos": 25
+      },
+      {
+        "ubicacion": "Estiba 3 Color Exportable",
+        "variedad": "Pink Floyd",
+        "grado": "Grado 50",
+        "bloque": "Bloque 2",
+        "tabacos": 1,
+        "tallosPorTabaco": 25,
+        "totalTallos": 25
+      }
+    ],
+    "totalTabacos": 3,
+    "totalTallos": 75,
+    "estado": "Despachada",
+    "inconformidad": "",
+    "historial": []
+  }
+]

@@ -60,65 +60,29 @@
         </div>
     </main>
 
-    <!-- MODAL REGISTRAR SALIDA -->
+    <!-- MODAL REGISTRAR SALIDA (VARIOS LOTES) -->
     <div id="modal-salida" class="hidden fixed inset-0 bg-slate-900/50 flex items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-2xl p-6 max-w-md w-full shadow-xl space-y-4">
+        <div class="bg-white rounded-2xl p-5 max-w-3xl w-full shadow-xl max-h-[92vh] flex flex-col gap-4">
             <div class="flex justify-between items-center border-b pb-3">
-                <h3 class="font-bold text-lg text-rose-800" id="modal-salida-titulo">Registrar Salida de Estiba</h3>
+                <h3 class="font-bold text-lg text-rose-800" id="modal-salida-titulo">Registrar Salida de Inventario</h3>
                 <button type="button" onclick="cerrarModal('modal-salida')" class="text-gray-400 hover:text-gray-600 font-bold">✕</button>
             </div>
-            <form id="form-salida" onsubmit="guardarSalida(event)" class="space-y-3">
-                <div>
-                    <label class="block text-xs font-bold text-slate-600 mb-1">Fecha</label>
-                    <input type="date" id="ss-fecha" required class="w-full border rounded-lg px-3 py-2 text-sm bg-slate-50">
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-slate-600 mb-1">Estiba / Ubicación</label>
-                    <select id="ss-ubicacion" onchange="actualizarFiltrosPorEstiba()" required class="w-full border rounded-lg px-3 py-2 text-sm bg-white font-bold text-slate-800">
-                    <option value="">-- Seleccione Estiba --</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-slate-600 mb-1">Bloque</label>
-                    <select id="ss-bloque" required class="w-full border rounded-lg px-3 py-2 text-sm bg-white">
-                        <option value="">-- Seleccione Bloque --</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-slate-600 mb-1">Variedad <span class="text-xs text-rose-600 font-normal">(Limitada a la estiba seleccionada)</span></label>
-                    <select id="ss-variedad" required class="w-full border rounded-lg px-3 py-2 text-sm bg-white font-bold text-rose-900">
-                        <option value="">-- Primero seleccione una estiba --</option>
-                    </select>
-                </div>
-
-                <div>
-                    <label class="block text-xs font-bold text-slate-600 mb-1">Grado</label>
-                    <select id="ss-grado" required class="w-full border rounded-lg px-3 py-2 text-sm bg-white">
-                        <option value="">-- Seleccione Grado --</option>
-                    </select>
-                </div>
-
-                <div class="grid grid-cols-2 gap-3">
+            <form id="form-salida" onsubmit="guardarSalida(event)" class="flex flex-col gap-4 min-h-0">
+                <div class="flex flex-wrap items-end gap-4">
                     <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1">Cantidad Tabacos</label>
-                        <input type="number" id="ss-tabacos" placeholder="0" min="1" required class="w-full border rounded-lg px-3 py-2 text-sm">
+                        <label class="block text-xs font-bold text-slate-600 mb-1">Fecha</label>
+                        <input type="date" id="salida-fecha" required class="border rounded-lg px-3 py-2 text-sm">
                     </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1">Tallos por Tabaco</label>
-                        <select id="ss-tallos-tabaco" required class="w-full border rounded-lg px-3 py-2 text-sm bg-white">
-                            <option value="40">40 tallos</option>
-                            <option value="25">25 tallos</option>
-                            <option value="50">50 tallos</option>
-                        </select>
-                    </div>
+                    <p class="text-xs text-slate-500 pb-2">Elige de qué estiba sale cada lote.</p>
                 </div>
-
-                <div class="flex justify-end gap-2 pt-3">
-                    <button type="button" onclick="cerrarModal('modal-salida')" class="px-4 py-2 bg-gray-200 rounded-lg text-sm font-bold">Cancelar</button>
-                    <button type="submit" class="px-4 py-2 bg-rose-600 text-white rounded-lg text-sm font-bold hover:bg-rose-700 shadow">Registrar Salida</button>
+                <div id="salida-lotes" class="space-y-2 overflow-y-auto min-h-0 pr-1"></div>
+                <button type="button" onclick="agregarLoteSalida()" class="self-start px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold rounded-lg text-sm">+ Agregar otro lote</button>
+                <div class="flex flex-wrap items-center justify-between gap-3 pt-3 border-t">
+                    <p id="salida-total" class="text-sm text-slate-600"></p>
+                    <div class="flex gap-2">
+                        <button type="button" onclick="cerrarModal('modal-salida')" class="px-4 py-2 bg-gray-200 rounded-lg text-sm font-bold">Cancelar</button>
+                        <button type="submit" id="btn-guardar-salida" class="px-4 py-2 bg-rose-600 text-white rounded-lg text-sm font-bold hover:bg-rose-700 shadow">Registrar Salida</button>
+                    </div>
                 </div>
             </form>
         </div>
@@ -127,5 +91,6 @@
     <!-- SCRIPTS -->
     <script src="js/main.js"></script>
     <script src="js/salidas.js"></script>
+    <script src="js/salidas-lotes.js"></script>
 </body>
 </html>

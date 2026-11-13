@@ -61,6 +61,7 @@ app.get('/api/entradas', (req, res) => {
 app.post('/api/entradas', (req, res) => {
     const entradas = leerJSON(ARCHIVOS.entradas);
     const nuevaEntrada = {
+        ...req.body,
         id: req.body.id || Date.now().toString(),
         fecha: req.body.fecha || new Date().toISOString().split('T')[0],
         ubicacion: req.body.ubicacion || '',
@@ -96,6 +97,7 @@ app.get('/api/salidas', (req, res) => {
 app.post('/api/salidas', (req, res) => {
     const salidas = leerJSON(ARCHIVOS.salidas);
     const nuevaSalida = {
+        ...req.body,
         id: req.body.id || Date.now().toString(),
         fecha: req.body.fecha || new Date().toISOString().split('T')[0],
         ubicacion: req.body.ubicacion || '',
@@ -165,6 +167,39 @@ app.get('/api/configuracion', (req, res) => {
 app.post('/api/configuracion', (req, res) => {
     guardarJSON(ARCHIVOS.configuracion, req.body);
     res.json({ success: true });
+});
+
+
+// ==========================================
+// 5. CLIENTES, REMISIONES E INCOMPLETOS
+// ==========================================
+['clientes', 'remisiones', 'incompletos'].forEach(nombre => {
+    ARCHIVOS[nombre] = path.join(DATA_DIR, `${nombre}.json`);
+
+    app.get(`/api/${nombre}`, (req, res) => {
+        res.json(leerJSON(ARCHIVOS[nombre]));
+    });
+
+    // Si ya existe un registro con ese id, lo reemplaza (así editar no duplica)
+    app.post(`/api/${nombre}`, (req, res) => {
+        const lista = leerJSON(ARCHIVOS[nombre]);
+        const registro = { ...req.body, id: req.body.id || Date.now().toString() };
+        const resto = lista.filter(r => String(r.id) !== String(registro.id));
+        resto.unshift(registro);
+        guardarJSON(ARCHIVOS[nombre], resto);
+        res.status(201).json({ success: true, data: registro });
+    });
+
+    app.delete(`/api/${nombre}/:id`, (req, res) => {
+        const lista = leerJSON(ARCHIVOS[nombre]).filter(r => String(r.id) !== String(req.params.id));
+        guardarJSON(ARCHIVOS[nombre], lista);
+        res.json({ success: true });
+    });
+});
+
+// Cualquier otra ruta /api que no exista responde 404 (y no la página principal)
+app.use('/api', (req, res) => {
+    res.status(404).json({ error: 'Ruta no encontrada' });
 });
 
 

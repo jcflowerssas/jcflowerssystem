@@ -207,12 +207,15 @@ window.exportarRespaldoSistema = async function() {
     const respaldo = {};
 
     try {
-        const [resConfig, resEntradas, resSalidas, resCortes, resCortadores] = await Promise.all([
+        const [resConfig, resEntradas, resSalidas, resCortes, resCortadores, resClientes, resRemisiones, resIncompletos] = await Promise.all([
             fetch('/api/configuracion').catch(() => null),
             fetch('/api/entradas').catch(() => null),
             fetch('/api/salidas').catch(() => null),
             fetch('/api/cortes').catch(() => null),
-            fetch('/api/cortadores').catch(() => null)
+            fetch('/api/cortadores').catch(() => null),
+            fetch('/api/clientes').catch(() => null),
+            fetch('/api/remisiones').catch(() => null),
+            fetch('/api/incompletos').catch(() => null)
         ]);
 
         if (resConfig && resConfig.ok) respaldo['app_configuracion_listas'] = await resConfig.json();
@@ -220,6 +223,9 @@ window.exportarRespaldoSistema = async function() {
         if (resSalidas && resSalidas.ok) respaldo['app_salidas'] = await resSalidas.json();
         if (resCortes && resCortes.ok) respaldo['app_cortes'] = await resCortes.json();
         if (resCortadores && resCortadores.ok) respaldo['app_cortadores'] = await resCortadores.json();
+        if (resClientes && resClientes.ok) respaldo['app_clientes'] = await resClientes.json();
+        if (resRemisiones && resRemisiones.ok) respaldo['app_remisiones'] = await resRemisiones.json();
+        if (resIncompletos && resIncompletos.ok) respaldo['app_incompletos'] = await resIncompletos.json();
     } catch (e) {
         console.warn('No se pudo conectar con el servidor para la exportación:', e);
     }
@@ -304,6 +310,9 @@ window.importarRespaldoSistema = function(event) {
                 await sincronizarColeccion('/api/salidas', respaldo['app_salidas']);
                 await sincronizarColeccion('/api/cortes', respaldo['app_cortes']);
                 await sincronizarColeccion('/api/cortadores', respaldo['app_cortadores']);
+                await sincronizarColeccion('/api/clientes', respaldo['app_clientes']);
+                await sincronizarColeccion('/api/remisiones', respaldo['app_remisiones']);
+                await sincronizarColeccion('/api/incompletos', respaldo['app_incompletos']);
 
                 alert('¡Respaldo completo restaurado exitosamente (inventario, salidas, cortes y cortadores) en el navegador y en el servidor! La página se recargará.');
                 location.reload();
