@@ -257,7 +257,7 @@ function renderizarGraficoDispersion(cortes) {
 
     if (!cortes || cortes.length === 0) return;
 
-    const colores = ['#10b981', '#3b82f6', '#f59e0b', '#ec4899', '#8b5cf6', '#06b6d4', '#f97316'];
+    const colores = ['#2c6d51', '#a5864c', '#4a86a8', '#8a9a3f', '#a33a4a', '#6b5b95', '#2f8f8a', '#c07a45'];
     const mapaCortadores = {};
 
     cortes.forEach(c => {

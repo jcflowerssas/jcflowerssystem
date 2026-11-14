@@ -3,7 +3,7 @@ let bloquesConocidos = [];
 let variedadesConocidas = [];
 let grafico = null;
 
-const PALETA = ['#10b981', '#3b82f6', '#f59e0b', '#8b5cf6', '#ec4899', '#06b6d4', '#f97316', '#84cc16', '#6366f1', '#14b8a6'];
+const PALETA = ['#2c6d51', '#a5864c', '#4a86a8', '#8a9a3f', '#a33a4a', '#6b5b95', '#2f8f8a', '#c07a45'];
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => Math.round(n).toLocaleString('es-CO');

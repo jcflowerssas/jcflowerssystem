@@ -524,39 +524,67 @@ function filasRemision(r) {
     return [...mapa.values()];
 }
 
+// Si el archivo del logo no está, prueba otras extensiones y al final usa el logo de respaldo
+window.siguienteLogo = function (img) {
+    const E = window.EMPRESA || {};
+    const alternos = E.logosAlternos || [];
+    const n = parseInt(img.dataset.n) || 0;
+    if (n < alternos.length) { img.dataset.n = n + 1; img.src = alternos[n]; return; }
+    img.onerror = null;
+    if (E.logoRespaldo) img.src = E.logoRespaldo; else img.style.display = 'none';
+};
+
 function htmlRemision(r) {
+    const E = window.EMPRESA || {};
     const c = r.cliente || {};
     const filas = filasRemision(r);
-    const FILAS_MIN = 10;
-    const vacias = Math.max(0, FILAS_MIN - filas.length);
+    const fecha = new Date(r.fecha + 'T00:00:00');
+    const fechaLarga = isNaN(fecha) ? '' : fecha.toLocaleDateString('es-CO', { day: 'numeric', month: 'long', year: 'numeric' });
+    const contacto = [E.direccion, E.telefono, E.correo].filter(Boolean).map(esc).join('  |  ');
     const hist = (r.historial || []).map(h => `${new Date(h.fecha).toLocaleDateString('es-CO')}: ${esc(h.motivo)}`).join('. ');
-    const recibe = [r.recibe, r.documentoRecibe ? 'C.C. ' + r.documentoRecibe : ''].filter(Boolean).map(esc).join(', ');
+    const fila = (et, v) => `<div class="rm-fila"><span>${et}</span><span>${v ? esc(v) : '&nbsp;'}</span></div>`;
 
     return `
-        <table class="rem">
-            <colgroup><col style="width:21%"><col style="width:17%"><col style="width:38%"><col style="width:24%"></colgroup>
-            <tr style="height:92px">
-                <td colspan="2" rowspan="2" class="logo">
-                    <img src="img/logo.png" alt="La Primavera" style="max-height:130px;max-width:100%;margin:auto" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
-                    <span style="display:none;font:italic 700 30px Georgia,serif;color:#1d4b8f">La Primavera</span>
-                </td>
-                <td colspan="2" class="banner">REMISIÓN No. ${esc(r.numero)}</td>
-            </tr>
-            <tr style="height:40px"><td></td><td></td></tr>
-            <tr><td class="et">Señor(es):</td><td>${esc(c.nombre)}</td><td class="et">Dirección:</td><td>${esc(c.direccion)}</td></tr>
-            <tr><td class="et">Pedido No.:</td><td>${esc(r.pedido)}</td><td class="et">Fecha:</td><td>${fmtFechaCorta(r.fecha)}</td></tr>
-            <tr><td class="et">Tallos</td><td>${num(r.totalTallos)}</td><td class="et">Tabacos</td><td>${num(r.totalTabacos)}</td></tr>
-            <tr class="azul"><td></td><td></td><td></td><td></td></tr>
-            <tr><td class="et">Cantidad</td><td class="et">Referencia</td><td class="et">Descripción del artículo</td><td class="et">Observaciones</td></tr>
-            ${filas.map(f => `<tr class="gris"><td>${num(f.tabacos)}</td><td>x${f.tpt}</td><td class="desc">${esc(f.desc)}</td><td>${num(f.tallos)}</td></tr>`).join('')}
-            ${'<tr class="gris"><td></td><td></td><td></td><td></td></tr>'.repeat(vacias)}
-            <tr style="height:44px"><td class="et" rowspan="2">Despachado por:</td><td rowspan="2">${esc(r.despachadoPor)}</td><td class="et der">Transportado por:</td><td>${esc(r.transportadoPor)}</td></tr>
-            <tr style="height:44px"><td class="et der">Tabacos</td><td class="ctr">${num(r.totalTabacos)}</td></tr>
-            <tr style="height:90px"><td class="et">Recibido por:</td><td colspan="3" style="vertical-align:bottom;font-size:11px;color:#555">${recibe}</td></tr>
+    <div class="rm-doc">
+        <div class="rm-head">
+            <div class="rm-marca">
+                ${(E.logo || E.logoRespaldo) ? `<img src="${esc(E.logo || E.logoRespaldo)}" alt="${esc(E.nombre)}" data-n="0" onerror="siguienteLogo(this)">` : ''}
+                <div class="rm-empresa">
+                    <strong>${esc(E.nombre || '')}</strong>
+                    ${E.nit ? `<span>NIT ${esc(E.nit)}</span>` : ''}
+                    ${contacto ? `<span>${contacto}</span>` : ''}
+                </div>
+            </div>
+            <div class="rm-titulo">
+                <div class="rm-etq">Remisión de despacho</div>
+                <div class="rm-num">No. ${esc(r.numero)}</div>
+                <div class="rm-fecha">${esc(fechaLarga)}</div>
+            </div>
+        </div>
+
+        <div class="rm-datos">
+            <div class="rm-caja"><h4>Cliente</h4>${fila('Señor(es)', c.nombre)}${fila('Dirección', c.direccion)}${fila('Pedido No.', r.pedido)}</div>
+            <div class="rm-caja"><h4>Despacho</h4>${fila('Fecha', fmtFecha(r.fecha))}${fila('Despachado por', r.despachadoPor)}${fila('Transportado por', r.transportadoPor)}</div>
+        </div>
+
+        <table class="rm-tabla">
+            <thead><tr><th style="width:18%">Cantidad (tabacos)</th><th style="width:16%">Referencia</th><th>Descripción del artículo</th><th class="n" style="width:20%;text-align:right">Total tallos</th></tr></thead>
+            <tbody>${filas.map(f => `<tr><td>${num(f.tabacos)}</td><td>x${f.tpt}</td><td>${esc(f.desc)}</td><td class="n">${num(f.tallos)}</td></tr>`).join('')}</tbody>
+            <tfoot><tr><td>${num(r.totalTabacos)}</td><td></td><td>Total</td><td class="n">${num(r.totalTallos)}</td></tr></tfoot>
         </table>
-        ${r.observaciones ? `<p style="font:12px Calibri,Arial,sans-serif;margin-top:8px"><b>Nota:</b> ${esc(r.observaciones)}</p>` : ''}
-        ${r.inconformidad ? `<p style="font:12px Calibri,Arial,sans-serif;margin-top:4px"><b>Inconformidad:</b> ${esc(r.inconformidad)}</p>` : ''}
-        ${hist ? `<p style="font:11px Calibri,Arial,sans-serif;margin-top:4px;color:#555"><b>Remisión modificada.</b> ${hist}</p>` : ''}`;
+
+        ${r.observaciones ? `<div class="rm-nota"><b>Nota:</b> ${esc(r.observaciones)}</div>` : ''}
+        ${r.inconformidad ? `<div class="rm-nota rojo"><b>Inconformidad:</b> ${esc(r.inconformidad)}</div>` : ''}
+        ${hist ? `<div class="rm-nota"><b>Remisión modificada.</b> ${hist}</div>` : ''}
+
+        <div class="rm-firmas">
+            <div class="rm-firma"><b>${esc(r.despachadoPor)}</b>Despachado por</div>
+            <div class="rm-firma"><b>${esc(r.transportadoPor)}</b>Transportado por</div>
+            <div class="rm-firma"><b>${esc(r.recibe)}${r.documentoRecibe ? ' · C.C. ' + esc(r.documentoRecibe) : ''}</b>Recibido por (nombre, firma y C.C.)</div>
+        </div>
+
+        <div class="rm-pie"><span>${esc(E.nombre || '')}</span><span>Remisión No. ${esc(r.numero)}</span></div>
+    </div>`;
 }
 
 window.verRemision = function (id) {

@@ -8,6 +8,11 @@ document.addEventListener("DOMContentLoaded", () => {
             const container = document.getElementById('nav-container');
             if (container) {
                 container.innerHTML = html;
+                // Resalta en el menú la página en la que estás
+                const actual = location.pathname.split('/').pop() || 'index.html';
+                container.querySelectorAll('nav a').forEach(a => {
+                    if (a.getAttribute('href') === actual) a.classList.add('activo');
+                });
             }
         })
         .catch(err => console.warn('Error cargando el menú:', err));
