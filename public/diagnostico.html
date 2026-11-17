@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Estado del servidor - JC Flowers</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="js/tema.js"></script>
+    <meta name="theme-color" content="#163827">
+    <style>
+        .dg { max-width: 720px; margin: 0 auto; padding: 16px; color: #16211b; }
+        .dg h2 { font-size: 20px; font-weight: 800; margin: 0 0 4px; }
+        .dg p { font-size: 14px; color: #61756b; margin: 0 0 14px; }
+        .dg-res { border-radius: 12px; padding: 12px 14px; font-size: 14px; margin-bottom: 14px; background: #eef3ef; }
+        .dg-res.ok { background: #e3efe8; color: #163827; }
+        .dg-res.mal { background: #f6dde0; color: #6e2335; }
+        .dg table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #e3e9e5; border-radius: 12px; overflow: hidden; font-size: 14px; }
+        .dg th { text-align: left; background: #f3f7f4; font-size: 12px; padding: 10px 12px; color: #61756b; }
+        .dg td { padding: 10px 12px; border-top: 1px solid #eef3ef; vertical-align: top; }
+        .dg .si { color: #2c6d4d; font-weight: 700; }
+        .dg .no { color: #a3304a; font-weight: 700; }
+        .dg .peq { font-size: 12px; color: #61756b; font-weight: 400; display: block; }
+        .dg button { margin-bottom: 12px; height: 42px; padding: 0 16px; border-radius: 10px; border: none; background: #163827; color: #fff; font-weight: 700; cursor: pointer; }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 font-sans">
+    <div id="nav-container"></div>
+    <main class="dg">
+        <h2>Estado del servidor</h2>
+        <p>Revisa que cada parte del sistema responda y permita guardar. Las pruebas de guardado crean y borran un registro temporal.</p>
+        <button type="button" id="dg-probar">Probar de nuevo</button>
+        <div id="dg-res" class="dg-res">Probando...</div>
+        <table>
+            <thead><tr><th>Parte</th><th>Leer</th><th>Guardar</th></tr></thead>
+            <tbody id="dg-filas"></tbody>
+        </table>
+    </main>
+    <script src="js/main.js"></script>
+    <script src="js/diagnostico.js"></script>
+</body>
+</html>
