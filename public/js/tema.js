@@ -77,20 +77,6 @@
         .shadow-sm { box-shadow: 0 1px 2px rgba(22,56,39,.06), 0 4px 14px rgba(22,56,39,.05); }
         ::selection { background: ${VERDE[200]}; }
         * { scrollbar-width: thin; scrollbar-color: ${NEUTRO[300]} transparent; }
-
-        /* Barra superior */
-        .jc-nav { background: ${VERDE[800]}; color: #fff; position: sticky; top: 0; z-index: 40; box-shadow: 0 2px 14px rgba(10,30,20,.28); }
-        .jc-nav-in { max-width: 80rem; margin: 0 auto; padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
-        .jc-marca { display: flex; align-items: center; gap: 12px; text-decoration: none; color: #fff; }
-        .jc-marca img { height: 44px; width: auto; display: block; }
-        .jc-marca-txt { display: none; font: 700 22px Georgia, 'Times New Roman', serif; letter-spacing: .5px; }
-        .jc-sep { width: 1px; height: 28px; background: rgba(255,255,255,.28); }
-        .jc-sub { font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: rgba(255,255,255,.72); font-weight: 600; }
-        .jc-links { display: flex; gap: 2px; overflow-x: auto; max-width: 100%; }
-        .jc-links a { padding: 9px 14px; border-radius: 8px; font-size: 13px; font-weight: 600; color: rgba(255,255,255,.78); text-decoration: none; white-space: nowrap; transition: background .15s, color .15s; }
-        .jc-links a:hover { background: rgba(255,255,255,.1); color: #fff; }
-        .jc-links a.activo { background: rgba(255,255,255,.14); color: #fff; box-shadow: inset 0 -2px 0 #fff; }
-        @media (max-width: 700px) { .jc-sub, .jc-sep { display: none; } .jc-marca img { height: 36px; } }
     `;
     const estilo = document.createElement('style');
     estilo.textContent = css;

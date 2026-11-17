@@ -3,7 +3,42 @@ let bloquesConocidos = [];
 let variedadesConocidas = [];
 let grafico = null;
 
-const PALETA = ['#2c6d51', '#a5864c', '#4a86a8', '#8a9a3f', '#a33a4a', '#6b5b95', '#2f8f8a', '#c07a45'];
+const PALETA = ['#2c6d4d', '#a5864c', '#4a86a8', '#9b5d7e', '#8a9a3f', '#2f8f8a', '#c07a45', '#6b5b95'];
+if (window.Chart) {
+    Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+    Chart.defaults.font.size = 12;
+    Chart.defaults.color = '#61756b';
+}
+const TOOLTIP = { backgroundColor: '#fff', titleColor: '#16211b', bodyColor: '#3b4740', footerColor: '#16211b', borderColor: '#dbe3de', borderWidth: 1, padding: 10, cornerRadius: 8, usePointStyle: true, boxPadding: 4 };
+const TRAZOS = [[], [7, 4], [2, 4], [9, 3, 2, 3]];
+const ESTILO_TRAZO = ['solid', 'dashed', 'dotted', 'dashed'];
+
+const pluginCruz = { id: 'cruz', afterDatasetsDraw(c) {
+    const a = c.tooltip && c.tooltip.getActiveElements ? c.tooltip.getActiveElements() : [];
+    if (!a.length) return;
+    const g = c.ctx;
+    g.save(); g.strokeStyle = '#c8d3cd'; g.lineWidth = 1; g.beginPath();
+    g.moveTo(a[0].element.x, c.chartArea.top); g.lineTo(a[0].element.x, c.chartArea.bottom); g.stroke(); g.restore();
+} };
+
+const pluginValores = { id: 'valores', afterDatasetsDraw(c) {
+    const g = c.ctx;
+    g.save(); g.font = '500 12px ' + Chart.defaults.font.family; g.fillStyle = '#16211b'; g.textAlign = 'center';
+    c.getDatasetMeta(0).data.forEach((b, i) => g.fillText(Math.round(c.data.datasets[0].data[i]).toLocaleString('es-CO'), b.x, b.y - 7));
+    g.restore();
+} };
+
+function obtenerLeyenda() {
+    let l = document.getElementById('leyenda-produccion');
+    if (!l) {
+        l = document.createElement('div');
+        l.id = 'leyenda-produccion';
+        l.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px 14px;margin-bottom:4px';
+        document.getElementById('lienzo').before(l);
+    }
+    return l;
+}
+
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => Math.round(n).toLocaleString('es-CO');
@@ -211,6 +246,7 @@ window.renderizarProduccion = function () {
 
     if (!lista.length) {
         document.getElementById('stats-periodo').textContent = '';
+        obtenerLeyenda().innerHTML = '';
         return;
     }
 
@@ -224,19 +260,30 @@ window.renderizarProduccion = function () {
         : `Total: <b>${num(total)}</b> tallos. Promedio: <b>${num(total / dias.length)}</b> por día con entradas. Mejor día: <b>${mejor}</b> con <b>${num(porDia[mejor])}</b>.`;
 
     const grupos = [...new Set(lista.map(r => r[dim]))].sort(natural);
-    const color = (g, i) => dim === 'variedad' && /freedom/i.test(g) ? '#dc2626' : PALETA[i % PALETA.length];
+    const conocidos = dim === 'bloque' ? bloquesConocidos : variedadesConocidas;
+    // El color sigue a cada bloque o variedad, no a su posición: al filtrar no cambia
+    const color = g => dim === 'variedad' && /freedom/i.test(g) ? '#b4233b' : PALETA[Math.max(0, conocidos.indexOf(g)) % PALETA.length];
     const canvas = document.getElementById('graficoProduccion');
+    const leyenda = obtenerLeyenda();
+    leyenda.innerHTML = '';
 
     if (tipo === 'dia') {
+        const datos = grupos.map(g => Math.round(suma(lista.filter(r => r[dim] === g))));
         grafico = new Chart(canvas, {
             type: 'bar',
-            data: { labels: grupos, datasets: [{ label: 'Tallos', data: grupos.map(g => Math.round(suma(lista.filter(r => r[dim] === g)))), backgroundColor: grupos.map(color) }] },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, title: { display: true, text: 'Tallos' } } } }
+            data: { labels: grupos, datasets: [{ data: datos, backgroundColor: grupos.map(color), borderRadius: 6, borderSkipped: 'bottom', maxBarThickness: 44 }] },
+            options: {
+                responsive: true, maintainAspectRatio: false, layout: { padding: { top: 18 } },
+                plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                scales: { x: { grid: { display: false }, border: { color: '#c8d3cd' } }, y: { display: false, beginAtZero: true, max: Math.max(...datos) * 1.12 } }
+            },
+            plugins: [pluginValores]
         });
         return;
     }
 
     const etiqueta = f => tipo === 'mes' ? String(Number(f.slice(8))) : new Date(f + 'T00:00:00').toLocaleDateString('es-CO', { weekday: 'short', day: 'numeric' });
+    const ultimo = fechas.length - 1;
     grafico = new Chart(canvas, {
         type: 'line',
         data: {
@@ -244,13 +291,40 @@ window.renderizarProduccion = function () {
             datasets: grupos.map((g, i) => ({
                 label: g,
                 data: fechas.map(f => Math.round(suma(lista.filter(r => r.fecha === f && r[dim] === g)))),
-                borderColor: color(g, i), backgroundColor: color(g, i), borderWidth: 2, pointRadius: 4, tension: 0.2
+                borderColor: color(g), backgroundColor: color(g) + '1a', fill: true, tension: 0.35, borderWidth: 2.5, borderDash: TRAZOS[i % 4],
+                pointRadius: ctx => ctx.dataIndex === ultimo ? 5 : 0, pointHoverRadius: 6,
+                pointBackgroundColor: color(g), pointBorderColor: '#fff', pointBorderWidth: 2
             }))
         },
         options: {
             responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { position: 'bottom' } },
-            scales: { y: { beginAtZero: true, title: { display: true, text: 'Tallos' } }, x: { title: { display: true, text: tipo === 'mes' ? 'Día del mes' : 'Día' } } }
-        }
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: false },
+                tooltip: { ...TOOLTIP, callbacks: {
+                    label: c => ' ' + c.dataset.label + ': ' + c.parsed.y.toLocaleString('es-CO'),
+                    footer: it => 'Total: ' + it.reduce((s, x) => s + x.parsed.y, 0).toLocaleString('es-CO')
+                } }
+            },
+            scales: {
+                x: { grid: { display: false }, border: { display: false } },
+                y: { beginAtZero: true, border: { display: false }, grid: { color: '#e8eeea', drawTicks: false }, ticks: { padding: 8, callback: v => v.toLocaleString('es-CO') } }
+            }
+        },
+        plugins: [pluginCruz]
+    });
+
+    // Leyenda: tocar un nombre oculta o muestra su línea
+    grupos.forEach((g, i) => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.style.cssText = 'display:flex;align-items:center;gap:7px;border:none;background:none;padding:2px 4px;font-size:12px;color:#3b4740;cursor:pointer';
+        chip.innerHTML = `<span style="width:18px;border-top:2.5px ${ESTILO_TRAZO[i % 4]} ${color(g)}"></span>${g}`;
+        chip.onclick = () => {
+            grafico.setDatasetVisibility(i, !grafico.isDatasetVisible(i));
+            grafico.update();
+            chip.style.opacity = grafico.isDatasetVisible(i) ? 1 : 0.35;
+        };
+        leyenda.appendChild(chip);
     });
 };

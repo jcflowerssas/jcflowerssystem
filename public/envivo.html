@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>En vivo - JC Flowers</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="js/tema.js"></script>
+    <meta name="theme-color" content="#163827">
+    <style>
+        .ev { max-width: 80rem; margin: 0 auto; padding: 16px; color: #16211b; }
+        .ev-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+        .ev-top h2 { font-size: 20px; font-weight: 800; margin: 0; display: flex; align-items: center; gap: 8px; }
+        .ev-punto { width: 10px; height: 10px; border-radius: 50%; background: #2c6d4d; }
+        .ev-acc { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+        .ev-in { height: 40px; border: 1px solid #c8d3cd; border-radius: 10px; padding: 0 10px; font-size: 14px; background: #fff; }
+        .ev-b { height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid #c8d3cd; background: #fff; color: #16211b; font-size: 14px; font-weight: 600; cursor: pointer; }
+        .ev-b.pri { background: #163827; border-color: #163827; color: #fff; }
+        .ev-b.pel { background: #fff; border-color: #a3304a; color: #a3304a; }
+        .ev-aviso { border-radius: 12px; padding: 12px 14px; font-size: 14px; margin-top: 12px; background: #f5ecd2; color: #624c22; }
+        .ev-aviso.ok { background: #e3efe8; color: #163827; }
+        .ev-met { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-top: 14px; }
+        .ev-m { background: #fff; border: 1px solid #e3e9e5; border-radius: 12px; padding: 12px 14px; }
+        .ev-m.mal { background: #f6dde0; border-color: #eebcc3; }
+        .ev-m-t { font-size: 12px; color: #61756b; }
+        .ev-m.mal .ev-m-t { color: #86263d; }
+        .ev-m-n { font-size: 26px; font-weight: 800; letter-spacing: -.5px; margin-top: 2px; }
+        .ev-m-n small { font-size: 12px; font-weight: 400; color: #61756b; letter-spacing: 0; }
+        .ev-tarj { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; margin-top: 14px; }
+        .ev-c { background: #fff; border: 1px solid #e3e9e5; border-radius: 14px; padding: 14px; }
+        .ev-c-cab { display: flex; align-items: center; gap: 10px; }
+        .ev-av { width: 34px; height: 34px; border-radius: 50%; background: #e3efe8; color: #163827; font-size: 13px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex: none; }
+        .ev-c-nom { font-size: 15px; font-weight: 700; }
+        .ev-c-sub { font-size: 12px; color: #61756b; }
+        .ev-chip { margin-left: auto; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 999px; white-space: nowrap; }
+        .ev-barra { position: relative; height: 8px; background: #eef3ef; border-radius: 4px; margin: 14px 0 10px; }
+        .ev-barra > i { display: block; height: 100%; border-radius: 4px; }
+        .ev-barra > b { position: absolute; left: 80%; top: -3px; width: 2px; height: 14px; background: #16211b; }
+        .ev-c-pie { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+        .ev-ritmo { font-size: 15px; font-weight: 700; }
+        .ev-ritmo span, .ev-peq { font-size: 12px; font-weight: 400; color: #61756b; }
+        .ev-vacio { background: #fff; border: 1px dashed #c8d3cd; border-radius: 14px; padding: 28px; text-align: center; color: #61756b; margin-top: 14px; }
+        .ev-modal { position: fixed; inset: 0; background: rgba(10,30,20,.5); z-index: 60; display: flex; align-items: flex-start; justify-content: center; padding: 16px; overflow-y: auto; }
+        .ev-modal-in { background: #fff; border-radius: 16px; padding: 18px; width: 100%; max-width: 760px; margin: 16px 0; color: #16211b; }
+        .ev-modal-in h3 { font-size: 18px; font-weight: 800; margin: 0 0 12px; }
+        .ev-f { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+        .ev-f label, .jr-fila label { display: block; font-size: 11px; font-weight: 700; color: #61756b; margin-bottom: 3px; }
+        .ev-f input, .jr-fila input[type=text], .jr-fila input[type=number], .jr-fila input[type=time], .jr-fila select, .jr-pausa input { width: 100%; height: 38px; border: 1px solid #c8d3cd; border-radius: 8px; padding: 0 8px; font-size: 14px; background: #fff; }
+        .jr-sec { font-size: 13px; font-weight: 700; margin: 16px 0 8px; }
+        .jr-pausa { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+        .jr-fila { border: 1px solid #e3e9e5; border-radius: 12px; padding: 10px; margin-bottom: 8px; }
+        .jr-fila.off { opacity: .55; }
+        .jr-fila-cab { display: flex; align-items: center; gap: 8px; font-weight: 700; margin-bottom: 8px; }
+        .jr-fila-cab input { width: 20px; height: 20px; accent-color: #163827; }
+        .jr-fila-c { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; }
+        .ev-modal-pie { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+        .ev-fr { display: inline-flex; align-items: center; gap: 6px; margin-top: 10px; padding: 4px 10px; border-radius: 999px; background: #f3f7f4; font-size: 12px; font-weight: 600; }
+        .ev-fr i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+        .ev-tend { font-size: 12px; font-weight: 600; margin-top: 2px; }
+        .ev-tend.baja { color: #a3304a; }
+        .ev-tend.sube { color: #2c6d4d; }
+        .ev-sec { font-size: 13px; font-weight: 700; margin: 16px 0 8px; }
+        .ev-oculto { display: none !important; }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 font-sans">
+
+    <div id="nav-container"></div>
+
+    <main class="ev">
+        <div class="ev-top">
+            <h2><span class="ev-punto"></span>En vivo <span class="ev-peq" id="ev-act"></span></h2>
+            <div class="ev-acc">
+                <input type="date" id="ev-fecha" class="ev-in" aria-label="Fecha">
+                <button type="button" class="ev-b" id="ev-btn-metas">Metas</button>
+                <button type="button" class="ev-b" id="ev-btn-jornada">Abrir jornada</button>
+                <button type="button" class="ev-b pel ev-oculto" id="ev-cerrar">Cerrar jornada</button>
+            </div>
+        </div>
+        <div id="ev-aviso"></div>
+        <section class="ev-met" id="ev-met"></section>
+        <section class="ev-tarj" id="ev-tarj"></section>
+    </main>
+
+    <!-- JORNADA -->
+    <div id="modal-jornada" class="ev-modal ev-oculto">
+        <form class="ev-modal-in" id="form-jornada">
+            <h3>Jornada del día</h3>
+            <div class="ev-f">
+                <div><label for="jr-inicio">Hora de inicio</label><input type="time" id="jr-inicio" required></div>
+                <div><label for="jr-fin">Hora de cierre prevista</label><input type="time" id="jr-fin" required></div>
+            </div>
+            <div class="jr-sec">Pausas <span class="ev-peq">(no se cuentan como tiempo de trabajo)</span></div>
+            <div id="jr-pausas"></div>
+            <button type="button" class="ev-b" id="jr-add-pausa">+ Agregar pausa</button>
+            <div class="jr-sec">Cortadoras de hoy <span class="ev-peq">(la mesa define el orden del recorrido. Si alguien no viene, desmárcala y asigna su variedad a otra. Durante el día, el patinador cambia el tipo y el bloque desde Recogida.)</span></div>
+            <div id="jr-cortadoras"></div>
+            <div class="ev-modal-pie">
+                <button type="button" class="ev-b" data-cerrar="modal-jornada">Cancelar</button>
+                <button type="submit" class="ev-b pri">Guardar jornada</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- METAS Y HORARIO -->
+    <div id="modal-metas" class="ev-modal ev-oculto">
+        <form class="ev-modal-in" id="form-metas" style="max-width:600px">
+            <h3>Metas y horario estándar</h3>
+            <div class="ev-sec" style="margin-top:0">Metas de rendimiento</div>
+            <div class="ev-f">
+                <div><label for="mt-colores">Color, tallos por hora</label><input type="number" id="mt-colores" min="1" inputmode="numeric"></div>
+                <div><label for="mt-freedom">Rojo, tallos por hora</label><input type="number" id="mt-freedom" min="1" inputmode="numeric"></div>
+                <div><label for="mt-tcolor">Tallos por tabaco, color</label><input type="number" id="mt-tcolor" min="1" inputmode="numeric"></div>
+                <div><label for="mt-trojo">Tallos por tabaco, rojo</label><input type="number" id="mt-trojo" min="1" inputmode="numeric"></div>
+                <div><label for="mt-verde">Verde desde (% de la meta)</label><input type="number" id="mt-verde" min="1" max="200" inputmode="numeric"></div>
+                <div><label for="mt-ambar">Ámbar desde (% de la meta)</label><input type="number" id="mt-ambar" min="1" max="200" inputmode="numeric"></div>
+                <div><label for="mt-alerta">Avisar sin recogida tras (min)</label><input type="number" id="mt-alerta" min="10" max="240" inputmode="numeric"></div>
+            </div>
+            <p class="ev-peq" style="margin-top:8px">El semáforo compara el promedio por hora con la meta. Si una cortadora hizo color y rojo, la meta se pondera por el tiempo en cada uno. No se juzga hasta que lleva 30 minutos medidos.</p>
+            <div class="ev-sec">Horario estándar de cada jornada nueva</div>
+            <div class="ev-f">
+                <div><label for="mt-inicio">Hora de inicio</label><input type="time" id="mt-inicio"></div>
+                <div><label for="mt-fin">Hora de cierre prevista</label><input type="time" id="mt-fin"></div>
+            </div>
+            <div class="jr-sec">Pausas de todos <span class="ev-peq">(no se cuentan como tiempo de trabajo)</span></div>
+            <div id="mt-pausas"></div>
+            <button type="button" class="ev-b" id="mt-add-pausa">+ Agregar pausa</button>
+            <div class="ev-modal-pie">
+                <button type="button" class="ev-b" data-cerrar="modal-metas">Cancelar</button>
+                <button type="submit" class="ev-b pri">Guardar</button>
+            </div>
+        </form>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script src="js/datos.js"></script>
+    <script src="js/calculo.js"></script>
+    <script src="js/envivo.js"></script>
+</body>
+</html>

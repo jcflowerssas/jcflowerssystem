@@ -249,62 +249,69 @@ window.eliminarCorte = async function(id) {
 };
 
 // GRÁFICO DE DISPERSIÓN (USA EXACTAMENTE EL VALOR DE PROMEDIO / HORA)
+// Paleta de la marca; el color sigue a cada cortador
+const colores = ['#2c6d4d', '#a5864c', '#4a86a8', '#9b5d7e', '#8a9a3f', '#2f8f8a', '#c07a45', '#6b5b95'];
+
+function leyendaCortadores() {
+    let l = document.getElementById('leyenda-cortadores');
+    if (!l) {
+        l = document.createElement('div');
+        l.id = 'leyenda-cortadores';
+        l.style.cssText = 'display:flex;flex-wrap:wrap;gap:6px 14px;margin-bottom:4px';
+        document.getElementById('graficoComparacionCortadores').parentElement.before(l);
+    }
+    return l;
+}
+
 function renderizarGraficoDispersion(cortes) {
     const canvas = document.getElementById('graficoComparacionCortadores');
     if (!canvas) return;
-
     if (chartCortadores) chartCortadores.destroy();
-
+    chartCortadores = null;
+    const leyenda = leyendaCortadores();
+    leyenda.innerHTML = '';
     if (!cortes || cortes.length === 0) return;
 
-    const colores = ['#2c6d51', '#a5864c', '#4a86a8', '#8a9a3f', '#a33a4a', '#6b5b95', '#2f8f8a', '#c07a45'];
-    const mapaCortadores = {};
+    Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+    Chart.defaults.font.size = 12;
+    Chart.defaults.color = '#61756b';
 
-    cortes.forEach(c => {
-        const promedio = obtenerPromedioHoraDelCorte(c);
-
-        if (!mapaCortadores[c.cortador]) {
-            mapaCortadores[c.cortador] = [];
-        }
-        mapaCortadores[c.cortador].push({
-            x: c.fecha,
-            y: promedio
-        });
-    });
-
-    const datasets = Object.keys(mapaCortadores).map((nombre, i) => ({
-        label: nombre,
-        data: mapaCortadores[nombre],
-        backgroundColor: colores[i % colores.length],
-        borderColor: colores[i % colores.length],
-        pointRadius: 6,
-        pointHoverRadius: 9
-    }));
+    const mapa = {};
+    cortes.forEach(c => { (mapa[c.cortador] = mapa[c.cortador] || []).push({ x: c.fecha, y: obtenerPromedioHoraDelCorte(c) }); });
+    const nombres = Object.keys(mapa).sort();
+    const todos = [...new Set(cortesGlobal.map(c => c.cortador))].filter(Boolean).sort();
+    const color = n => colores[Math.max(0, todos.indexOf(n)) % colores.length];   // el color sigue al cortador
+    const formas = ['circle', 'rectRot', 'triangle', 'rect'];
+    const formasCss = ['border-radius:50%', 'transform:rotate(45deg);border-radius:1px', 'clip-path:polygon(50% 0,100% 100%,0 100%)', 'border-radius:2px'];
 
     chartCortadores = new Chart(canvas, {
         type: 'scatter',
-        data: { datasets },
+        data: { datasets: nombres.map((n, i) => ({ label: n, data: mapa[n], backgroundColor: color(n), borderColor: '#fff', borderWidth: 2, pointStyle: formas[i % 4], pointRadius: 7, pointHoverRadius: 9 })) },
         options: {
-            responsive: true,
-            maintainAspectRatio: false,
+            responsive: true, maintainAspectRatio: false,
             plugins: {
-                tooltip: {
-                    callbacks: {
-                        label: (ctx) => `${ctx.dataset.label}: ${ctx.raw.y} tallos/hr (${ctx.raw.x})`
-                    }
-                }
+                legend: { display: false },
+                tooltip: { backgroundColor: '#fff', titleColor: '#16211b', bodyColor: '#3b4740', borderColor: '#dbe3de', borderWidth: 1, padding: 10, cornerRadius: 8, usePointStyle: true, boxPadding: 4,
+                    callbacks: { title: items => items[0].raw.x, label: ctx => ' ' + ctx.dataset.label + ': ' + ctx.raw.y.toLocaleString('es-CO') + ' tallos/hr' } }
             },
             scales: {
-                x: {
-                    type: 'category',
-                    title: { display: true, text: 'Fecha del Corte' }
-                },
-                y: {
-                    beginAtZero: true,
-                    title: { display: true, text: 'Tallos / Hora' }
-                }
+                x: { type: 'category', grid: { display: false }, border: { display: false } },
+                y: { beginAtZero: true, border: { display: false }, grid: { color: '#e8eeea', drawTicks: false }, ticks: { padding: 8 }, title: { display: true, text: 'Tallos por hora' } }
             }
         }
+    });
+
+    nombres.forEach((n, i) => {
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.style.cssText = 'display:flex;align-items:center;gap:7px;border:none;background:none;padding:2px 4px;font-size:12px;color:#3b4740;cursor:pointer';
+        chip.innerHTML = `<span style="width:10px;height:10px;background:${color(n)};${formasCss[i % 4]}"></span>${n}`;
+        chip.onclick = () => {
+            chartCortadores.setDatasetVisibility(i, !chartCortadores.isDatasetVisible(i));
+            chartCortadores.update();
+            chip.style.opacity = chartCortadores.isDatasetVisible(i) ? 1 : 0.35;
+        };
+        leyenda.appendChild(chip);
     });
 }
 
@@ -334,24 +341,16 @@ function renderizarRankingCortadores(cortes) {
         return { nombre, promedio, totalTallos: resumen[nombre].tallos };
     }).sort((a, b) => b.promedio - a.promedio);
 
-    ranking.forEach((item, index) => {
-        const medallas = ['🥇', '🥈', '🥉'];
-        const icono = medallas[index] || `#${index + 1}`;
-
-        const div = document.createElement('div');
-        div.className = 'py-2.5 flex items-center justify-between text-sm';
-        div.innerHTML = `
-            <div class="flex items-center gap-2">
-                <span class="font-bold text-base">${icono}</span>
-                <div>
-                    <p class="font-bold text-slate-800 leading-tight">${item.nombre}</p>
-                    <p class="text-[11px] text-gray-500">${item.totalTallos.toLocaleString()} tallos acumulados</p>
-                </div>
+    const maximo = ranking[0].promedio || 1;
+    const nf = n => Math.round(n).toLocaleString('es-CO');
+    contenedor.innerHTML = ranking.map((r, i) => `
+        <div style="padding:9px 0">
+            <div style="display:flex;align-items:center;gap:10px">
+                <span style="width:22px;height:22px;border-radius:50%;flex:none;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;background:${i === 0 ? '#163827' : '#e3efe8'};color:${i === 0 ? '#fff' : '#163827'}">${i + 1}</span>
+                <span style="flex:1;font-size:13px;font-weight:600;color:#16211b">${r.nombre}</span>
+                <span style="font-size:13px;font-weight:700;color:#16211b">${nf(r.promedio)} <span style="font-weight:400;font-size:11px;color:#61756b">t/h</span></span>
             </div>
-            <span class="font-black text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg text-xs">
-                ${item.promedio.toLocaleString()} t/h
-            </span>
-        `;
-        contenedor.appendChild(div);
-    });
+            <div style="margin:6px 0 0 32px;height:8px;background:#eef3ef;border-radius:4px"><div style="width:${Math.round(r.promedio / maximo * 100)}%;height:100%;border-radius:4px;background:${i === 0 ? '#163827' : '#7fa88f'}"></div></div>
+            <div style="margin:3px 0 0 32px;font-size:11px;color:#61756b">${nf(r.totalTallos)} tallos acumulados</div>
+        </div>`).join('');
 }

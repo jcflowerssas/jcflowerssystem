@@ -207,7 +207,7 @@ window.exportarRespaldoSistema = async function() {
     const respaldo = {};
 
     try {
-        const [resConfig, resEntradas, resSalidas, resCortes, resCortadores, resClientes, resRemisiones, resIncompletos] = await Promise.all([
+        const [resConfig, resEntradas, resSalidas, resCortes, resCortadores, resClientes, resRemisiones, resIncompletos, resJornadas, resRecogidas, resMetas, resEventos] = await Promise.all([
             fetch('/api/configuracion').catch(() => null),
             fetch('/api/entradas').catch(() => null),
             fetch('/api/salidas').catch(() => null),
@@ -215,7 +215,11 @@ window.exportarRespaldoSistema = async function() {
             fetch('/api/cortadores').catch(() => null),
             fetch('/api/clientes').catch(() => null),
             fetch('/api/remisiones').catch(() => null),
-            fetch('/api/incompletos').catch(() => null)
+            fetch('/api/incompletos').catch(() => null),
+            fetch('/api/jornadas').catch(() => null),
+            fetch('/api/recogidas').catch(() => null),
+            fetch('/api/metas').catch(() => null),
+            fetch('/api/eventos').catch(() => null)
         ]);
 
         if (resConfig && resConfig.ok) respaldo['app_configuracion_listas'] = await resConfig.json();
@@ -226,6 +230,10 @@ window.exportarRespaldoSistema = async function() {
         if (resClientes && resClientes.ok) respaldo['app_clientes'] = await resClientes.json();
         if (resRemisiones && resRemisiones.ok) respaldo['app_remisiones'] = await resRemisiones.json();
         if (resIncompletos && resIncompletos.ok) respaldo['app_incompletos'] = await resIncompletos.json();
+        if (resJornadas && resJornadas.ok) respaldo['app_jornadas'] = await resJornadas.json();
+        if (resRecogidas && resRecogidas.ok) respaldo['app_recogidas'] = await resRecogidas.json();
+        if (resMetas && resMetas.ok) respaldo['app_metas'] = await resMetas.json();
+        if (resEventos && resEventos.ok) respaldo['app_eventos'] = await resEventos.json();
     } catch (e) {
         console.warn('No se pudo conectar con el servidor para la exportación:', e);
     }
@@ -313,6 +321,10 @@ window.importarRespaldoSistema = function(event) {
                 await sincronizarColeccion('/api/clientes', respaldo['app_clientes']);
                 await sincronizarColeccion('/api/remisiones', respaldo['app_remisiones']);
                 await sincronizarColeccion('/api/incompletos', respaldo['app_incompletos']);
+                await sincronizarColeccion('/api/jornadas', respaldo['app_jornadas']);
+                await sincronizarColeccion('/api/recogidas', respaldo['app_recogidas']);
+                await sincronizarColeccion('/api/metas', respaldo['app_metas']);
+                await sincronizarColeccion('/api/eventos', respaldo['app_eventos']);
 
                 alert('¡Respaldo completo restaurado exitosamente (inventario, salidas, cortes y cortadores) en el navegador y en el servidor! La página se recargará.');
                 location.reload();

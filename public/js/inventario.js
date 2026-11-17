@@ -359,6 +359,9 @@ window.actualizarTablaResumen = async function() {
         cat.totalTabacos = Math.max(0, cat.totalTabacos);
     });
 
+    window.resumenInventario = resumen;
+    if (typeof renderResumenInteractivo === 'function') renderResumenInteractivo(resumen);
+
     const setTexto = (id, tallos, tabacos) => {
         const el = document.getElementById(id);
         if (el) {

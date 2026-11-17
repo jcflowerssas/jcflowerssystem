@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recogida - JC Flowers</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="js/tema.js"></script>
+    <meta name="theme-color" content="#163827">
+    <style>
+        .rg { max-width: 560px; margin: 0 auto; padding: 12px 12px 8px; color: #16211b; }
+        .rg-aviso { border-radius: 12px; padding: 12px 14px; font-size: 14px; margin-bottom: 10px; }
+        .rg-aviso.ok { background: #e3efe8; color: #163827; }
+        .rg-aviso.mal { background: #f6dde0; color: #6e2335; }
+        .rg-aviso.info { background: #f5ecd2; color: #624c22; }
+        .rg-barra { background: #163827; color: #fff; border-radius: 14px; padding: 12px 14px; }
+        .rg-barra-1 { display: flex; justify-content: space-between; align-items: center; font-size: 17px; font-weight: 700; }
+        .rg-barra-2 { font-size: 12px; color: rgba(255,255,255,.78); margin-top: 2px; }
+        .rg-final { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,.1); font-size: 14px; font-weight: 600; cursor: pointer; }
+        .rg-final input { width: 22px; height: 22px; accent-color: #a5864c; }
+        .rg-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+        .rg-tile { border: 1px solid #d9e1dc; background: #fff; border-radius: 14px; padding: 12px; }
+        .rg-tile.on { border: 2px solid #2c6d4d; background: #f1f7f3; padding: 11px; }
+        .rg-mesa { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #61756b; }
+        .rg-nombre { font-size: 15px; font-weight: 700; margin-top: 2px; }
+        .rg-frente { display: flex; align-items: center; gap: 6px; width: 100%; margin-top: 6px; padding: 7px 8px; border: 1px solid #c8d3cd; border-radius: 10px; background: #fff; font-size: 12px; font-weight: 600; color: #16211b; text-align: left; cursor: pointer; line-height: 1.25; }
+        .rg-punto { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+        .rg-cuenta { font-size: 38px; font-weight: 800; line-height: 1.1; margin: 8px 0 0; letter-spacing: -1px; }
+        .rg-hora { font-size: 11px; color: #61756b; min-height: 15px; margin-bottom: 6px; }
+        .rg-otras { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 6px; }
+        .rg-bots { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+        .rg-btn { height: 52px; border-radius: 12px; border: 1px solid #c8d3cd; background: #fff; color: #16211b; font-size: 26px; cursor: pointer; }
+        .rg-btn.mas { background: #163827; border: none; color: #fff; }
+        .rg-btn:active { transform: scale(.97); }
+        .rg-fin { width: 100%; margin-top: 8px; padding: 8px; border: 1px dashed #c8d3cd; border-radius: 10px; background: none; font-size: 12px; color: #3b4740; cursor: pointer; }
+        .rg-fin.listo { border-style: solid; background: #eef3ef; font-weight: 600; }
+        .rg-fin.falta { border-color: #a5864c; background: #f5ecd2; color: #624c22; font-weight: 700; }
+        .rg-inc { margin-top: 10px; padding-top: 10px; border-top: 1px dashed #c8d3cd; }
+        .rg-inc-t { font-size: 12px; font-weight: 700; color: #7a5f26; margin-bottom: 6px; }
+        .rg-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+        .rg-chip { border: none; background: #f5ecd2; color: #624c22; border-radius: 999px; padding: 6px 10px; font-size: 13px; font-weight: 600; cursor: pointer; }
+        .rg-chip.peq { background: #e3efe8; color: #163827; font-size: 12px; padding: 4px 8px; }
+        .rg-inc-f { display: flex; gap: 6px; }
+        .rg-inc-in { width: 100%; min-width: 0; height: 44px; border: 1px solid #c8d3cd; border-radius: 10px; padding: 0 10px; font-size: 16px; }
+        .rg-inc-b { height: 44px; padding: 0 12px; border: none; border-radius: 10px; background: #a5864c; color: #fff; font-size: 13px; font-weight: 700; cursor: pointer; }
+        .rg-pie { position: sticky; bottom: 0; background: #fff; border-top: 1px solid #e3e9e5; padding: 10px 12px 14px; margin: 12px -12px 0; }
+        .rg-resumen { font-size: 14px; color: #3b4740; margin-bottom: 8px; }
+        .rg-guardar { width: 100%; height: 56px; border: none; border-radius: 14px; background: #163827; color: #fff; font-size: 17px; font-weight: 700; cursor: pointer; }
+        .rg-guardar:disabled { opacity: .6; }
+        .rg-oculto { display: none !important; }
+        .rg-sheet { position: fixed; inset: 0; background: rgba(10,30,20,.5); z-index: 70; display: flex; align-items: flex-end; justify-content: center; }
+        .rg-sheet-in { background: #fff; width: 100%; max-width: 560px; border-radius: 20px 20px 0 0; padding: 18px 16px 20px; color: #16211b; max-height: 90vh; overflow-y: auto; }
+        .rg-sheet-in h3 { font-size: 17px; font-weight: 800; margin: 0 0 12px; }
+        .rg-sheet-in label { display: block; font-size: 12px; font-weight: 700; color: #61756b; margin: 12px 0 4px; }
+        .rg-sheet-in select, .rg-sheet-in input[type=time] { width: 100%; height: 48px; border: 1px solid #c8d3cd; border-radius: 10px; padding: 0 10px; font-size: 16px; background: #fff; }
+        .sh-seg { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+        .sh-seg button { height: 52px; border-radius: 12px; border: 1px solid #c8d3cd; background: #fff; font-size: 16px; font-weight: 700; cursor: pointer; }
+        .sh-seg button.act { background: #163827; border-color: #163827; color: #fff; }
+        .sh-rap { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+        .sh-rap button { border: 1px solid #c8d3cd; background: #fff; border-radius: 999px; padding: 8px 12px; font-size: 13px; cursor: pointer; }
+        .sh-pie { display: flex; gap: 8px; margin-top: 18px; }
+        .sh-pie button { flex: 1; height: 50px; border-radius: 12px; border: 1px solid #c8d3cd; background: #fff; font-size: 15px; font-weight: 700; cursor: pointer; }
+        .sh-pie button.pri { background: #163827; border-color: #163827; color: #fff; }
+        .sh-pie button.pel { color: #a3304a; border-color: #a3304a; }
+    </style>
+</head>
+<body class="bg-slate-100 min-h-screen text-slate-800 font-sans">
+
+    <div id="nav-container"></div>
+
+    <main class="rg">
+        <div id="rg-aviso"></div>
+
+        <section id="rg-panel" class="rg-oculto">
+            <div class="rg-barra">
+                <div class="rg-barra-1"><span id="rg-titulo">Recogida</span><span id="rg-reloj"></span></div>
+                <div class="rg-barra-2" id="rg-sub"></div>
+                <label class="rg-final"><input type="checkbox" id="rg-final"><span>Recogida final: agregar incompletos</span></label>
+            </div>
+            <div id="rg-tiles" class="rg-grid"></div>
+            <div class="rg-pie">
+                <div class="rg-resumen" id="rg-resumen"></div>
+                <button type="button" class="rg-guardar" id="rg-guardar">Guardar recogida</button>
+            </div>
+        </section>
+    </main>
+
+    <div id="rg-sheet" class="rg-sheet rg-oculto" role="dialog" aria-modal="true" aria-labelledby="sh-titulo">
+        <div class="rg-sheet-in">
+            <h3 id="sh-titulo"></h3>
+            <div id="sh-cuerpo"></div>
+            <div class="sh-pie" id="sh-pie"></div>
+        </div>
+    </div>
+
+    <script src="js/main.js"></script>
+    <script src="js/datos.js"></script>
+    <script src="js/calculo.js"></script>
+    <script src="js/recogida.js"></script>
+</body>
+</html>
