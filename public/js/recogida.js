@@ -107,8 +107,6 @@
         $('rg-tiles').innerHTML = cortadoras().map(htmlTile).join('');
         pintarCabecera();
         pintarResumen();
-        const pend = D.pendientes('recogidas') + D.pendientes('eventos');
-        if (pend) aviso(`${pend} registro${pend > 1 ? 's' : ''} sin enviar. Se enviarán cuando haya señal.`, 'info');
     }
 
     function repintarTile(c) {
@@ -266,7 +264,7 @@
     });
 
     async function cargar() {
-        await D.sincronizar('recogidas'); await D.sincronizar('eventos');
+        await D.sincronizarTodo();
         const jornadas = await D.leer('jornadas');
         jornada = jornadas.find(j => j.id === D.hoy()) || null;
         recogidas = (await D.leer('recogidas')).filter(r => r.fecha === D.hoy());
@@ -274,9 +272,18 @@
         metas = (await D.leer('metas')).find(m => m.id === 'config') || {};
         leerBorrador();
         pintar();
+        pintarConexion();
     }
 
-    window.addEventListener('online', async () => { await D.sincronizar('recogidas'); await D.sincronizar('eventos'); pintar(); });
+    // Avisa si lo que se guarda no está llegando al servidor (los demás teléfonos no lo verían)
+    function pintarConexion() {
+        const texto = D.avisoServidor(), pend = D.pendientesTodo();
+        $('rg-conex').innerHTML = (texto || pend)
+            ? `<div class="rg-aviso mal">${texto ? texto + ' ' : ''}${pend ? `${pend} registro${pend > 1 ? 's' : ''} sin enviar. ` : ''}<button type="button" id="rg-reintentar" style="font-weight:700;text-decoration:underline">Reintentar</button></div>` : '';
+    }
+    document.addEventListener('click', e => { if (e.target.id === 'rg-reintentar') cargar(); });
+
+    window.addEventListener('online', () => cargar());
     setInterval(() => { if (jornada && $('rg-reloj')) $('rg-reloj').textContent = D.ahora(); }, 20000);
     cargar();
 })();

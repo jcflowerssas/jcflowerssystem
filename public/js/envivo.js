@@ -27,14 +27,26 @@
     }
 
     // ---------- Datos ----------
+    const MENSAJE_LOCAL = 'Se guardó solo en este equipo: el servidor todavía no tiene la versión nueva (falta actualizar server.js en Railway). Los teléfonos no lo verán hasta entonces.';
+
     async function cargar() {
+        await D.sincronizarTodo();
         jornadas = await D.leer('jornadas');
         jornada = jornadas.find(j => j.id === fecha) || null;
         recogidas = (await D.leer('recogidas')).filter(r => r.fecha === fecha);
         eventos = (await D.leer('eventos')).filter(e => e.fecha === fecha);
         metas = (await D.leer('metas')).find(m => m.id === 'config') || {};
         pintar();
+        pintarConexion();
     }
+
+    // Avisa si lo que se guarda no está llegando al servidor (los teléfonos no lo verían)
+    function pintarConexion() {
+        const texto = D.avisoServidor(), pend = D.pendientesTodo();
+        $('ev-conex').innerHTML = (texto || pend)
+            ? `<div class="ev-aviso mal">${texto ? texto + ' ' : ''}${pend ? `${pend} registro${pend > 1 ? 's' : ''} sin enviar. ` : ''}<button type="button" id="ev-reintentar" style="font-weight:700;text-decoration:underline">Reintentar</button></div>` : '';
+    }
+    document.addEventListener('click', ev => { if (ev.target.id === 'ev-reintentar') cargar(); });
 
     // ---------- Tablero ----------
     function sparkline(valores, color) {
@@ -175,7 +187,8 @@
             cortadoras.push(c);
         }
         if (!cortadoras.length) { alert('Marca al menos una cortadora.'); return; }
-        await D.guardar('jornadas', { id: fecha, fecha, inicio: $('jr-inicio').value, fin: $('jr-fin').value, pausas: leerPausas($('jr-pausas')), cortadoras, cerrada: false });
+        const guardada = await D.guardar('jornadas', { id: fecha, fecha, inicio: $('jr-inicio').value, fin: $('jr-fin').value, pausas: leerPausas($('jr-pausas')), cortadoras, cerrada: false });
+        if (!guardada) alert(MENSAJE_LOCAL);
         $('modal-jornada').classList.add('ev-oculto');
         await cargar();
     });
@@ -198,11 +211,12 @@
         e.preventDefault();
         const n = id => Number($(id).value) || 0;
         if (n('mt-ambar') >= n('mt-verde')) { alert('El ámbar debe empezar por debajo del verde.'); return; }
-        await D.guardar('metas', {
+        const guardada = await D.guardar('metas', {
             id: 'config', colores: n('mt-colores') || '', freedom: n('mt-freedom') || '', tptColor: n('mt-tcolor') || 25, tptRojo: n('mt-trojo') || 40,
             verde: n('mt-verde'), ambar: n('mt-ambar'), alertaMin: n('mt-alerta'),
             inicio: $('mt-inicio').value || '06:00', fin: $('mt-fin').value || '16:00', pausas: leerPausas($('mt-pausas'))
         });
+        if (!guardada) alert(MENSAJE_LOCAL);
         $('modal-metas').classList.add('ev-oculto');
         await cargar();
     });

@@ -9,21 +9,29 @@
     const hoy = () => { const d = new Date(); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`; };
     const ahora = () => { const d = new Date(); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 
+    // ok, sin-ruta (el servidor aún no tiene esa parte), sin-conexion o error
+    const estado = {};
+
     // Lo que quedó pendiente de enviar en este equipo se conserva junto a lo del servidor
     async function leer(nombre) {
         try {
             const r = await fetch('/api/' + nombre);
             if (r.ok) {
-                const d = await r.json();
+                let d = null;
+                try { d = await r.json(); } catch (e) { d = null; }
                 if (Array.isArray(d)) {
+                    estado[nombre] = 'ok';
                     const ids = new Set(d.map(x => String(x.id)));
                     const pend = leerLocal(nombre).filter(x => x.pendiente && !ids.has(String(x.id)));
                     const todo = unicos([...d, ...pend]);
                     escribirLocal(nombre, todo);
                     return todo;
                 }
+                estado[nombre] = 'sin-ruta';       // el servidor devolvió una página en vez de datos
+            } else {
+                estado[nombre] = r.status === 404 ? 'sin-ruta' : 'error';
             }
-        } catch (e) { /* sin servidor: se usa la copia local */ }
+        } catch (e) { estado[nombre] = 'sin-conexion'; }
         return unicos(leerLocal(nombre));
     }
 
@@ -55,5 +63,21 @@
     const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const num = n => Math.round(Number(n) || 0).toLocaleString('es-CO');
 
-    window.DATOS = { leer, guardar, borrar, sincronizar, pendientes, hoy, ahora, esc, num };
+    const MODULO = ['jornadas', 'recogidas', 'eventos', 'metas'];
+    async function sincronizarTodo(nombres = MODULO) {
+        let n = 0;
+        for (const x of nombres) n += await sincronizar(x);
+        return n;
+    }
+    const pendientesTodo = (nombres = MODULO) => nombres.reduce((s, x) => s + pendientes(x), 0);
+
+    // Texto para avisar cuando lo que se guarda no está llegando al servidor
+    function avisoServidor(nombres = MODULO) {
+        const malas = nombres.filter(n => estado[n] && estado[n] !== 'ok');
+        if (!malas.length) return '';
+        if (malas.some(n => estado[n] === 'sin-ruta')) return 'El servidor todavía no tiene la versión nueva de este módulo (falta actualizar server.js en Railway). Lo que registres aquí solo se ve en este equipo.';
+        return 'Sin conexión con el servidor. Lo que registres se enviará cuando vuelva la señal.';
+    }
+
+    window.DATOS = { leer, guardar, borrar, sincronizar, sincronizarTodo, pendientes, pendientesTodo, avisoServidor, estado, hoy, ahora, esc, num };
 })();
