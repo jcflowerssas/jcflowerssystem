@@ -169,12 +169,11 @@ app.post('/api/configuracion', (req, res) => {
     res.json({ success: true });
 });
 
-//s
 
 // ==========================================
-// 5. CLIENTES, REMISIONES E INCOMPLETOS
+// 5. CLIENTES, REMISIONES, INCOMPLETOS Y RECOGIDA DE TABACOS
 // ==========================================
-['clientes', 'remisiones', 'incompletos'].forEach(nombre => {
+['clientes', 'remisiones', 'incompletos', 'jornadas', 'recogidas', 'metas', 'eventos'].forEach(nombre => {
     ARCHIVOS[nombre] = path.join(DATA_DIR, `${nombre}.json`);
 
     app.get(`/api/${nombre}`, (req, res) => {

@@ -44,7 +44,7 @@
     function pintarConexion() {
         const texto = D.avisoServidor(), pend = D.pendientesTodo();
         $('ev-conex').innerHTML = (texto || pend)
-            ? `<div class="ev-aviso mal">${texto ? texto + ' ' : ''}${pend ? `${pend} registro${pend > 1 ? 's' : ''} sin enviar. ` : ''}<button type="button" id="ev-reintentar" style="font-weight:700;text-decoration:underline">Reintentar</button></div>` : '';
+            ? `<div class="ev-aviso mal">${texto ? texto + ' ' : ''}${pend ? `${pend} registro${pend > 1 ? 's' : ''} sin enviar. ` : ''}<button type="button" id="ev-reintentar" style="font-weight:700;text-decoration:underline">Reintentar</button> <a href="diagnostico.html" style="font-weight:700;text-decoration:underline;margin-left:8px">Ver detalle</a></div>` : '';
     }
     document.addEventListener('click', ev => { if (ev.target.id === 'ev-reintentar') cargar(); });
 

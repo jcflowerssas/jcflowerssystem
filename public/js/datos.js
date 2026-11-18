@@ -75,7 +75,8 @@
     function avisoServidor(nombres = MODULO) {
         const malas = nombres.filter(n => estado[n] && estado[n] !== 'ok');
         if (!malas.length) return '';
-        if (malas.some(n => estado[n] === 'sin-ruta')) return 'El servidor todavía no tiene la versión nueva de este módulo (falta actualizar server.js en Railway). Lo que registres aquí solo se ve en este equipo.';
+        const faltan = malas.filter(n => estado[n] === 'sin-ruta');
+        if (faltan.length) return `Al servidor le faltan estas partes: ${faltan.join(', ')}. Hay que subir el server.js más reciente a la carpeta principal del proyecto en Railway. Mientras tanto, lo que registres aquí solo se ve en este equipo.`;
         return 'Sin conexión con el servidor. Lo que registres se enviará cuando vuelva la señal.';
     }
 
