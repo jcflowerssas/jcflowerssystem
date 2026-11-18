@@ -71,6 +71,57 @@ function fechasDeMes(ym) {
     return Array.from({ length: n }, (_, i) => fechaStr(y, m - 1, i + 1));
 }
 
+// ---------- Grados: cuánto salió de Grado 50, Grado 40 y Nacional ----------
+const GRADOS_ORDEN = ['Grado 50', 'Grado 40', 'Nacional'];
+const COLOR_GRADO = { 'Grado 50': '#163827', 'Grado 40': '#2c6d4d', 'Nacional': '#a5864c' };
+const colorGrado = g => COLOR_GRADO[g] || '#7fa88f';
+const ordenGrado = (a, b) => { const i = GRADOS_ORDEN.indexOf(a), j = GRADOS_ORDEN.indexOf(b); return (i < 0 ? 99 : i) - (j < 0 ? 99 : j) || natural(a, b); };
+let gradosConocidos = [], verPor = 'variedad', ultimaDia = [], ultimaPeriodo = [];
+
+function htmlGrados(lista) {
+    if (!lista.length) return '';
+    const grados = [...new Set(lista.map(r => r.grado))].sort(ordenGrado);
+    const filas = {}, porGrado = {};
+    let total = 0;
+    lista.forEach(r => {
+        const f = filas[r[verPor]] = filas[r[verPor]] || { total: 0, g: {} };
+        f.g[r.grado] = (f.g[r.grado] || 0) + r.tallos; f.total += r.tallos;
+        porGrado[r.grado] = (porGrado[r.grado] || 0) + r.tallos; total += r.tallos;
+    });
+    const claves = Object.keys(filas).sort(verPor === 'bloque' ? natural : (a, b) => filas[b].total - filas[a].total);
+    const pct = (v, t) => (t > 0 ? Math.round(v / t * 100) : 0);
+    const cuadro = g => `<i style="width:10px;height:10px;border-radius:2px;background:${colorGrado(g)};display:inline-block"></i>`;
+    const chips = grados.map(g => `<span style="display:inline-flex;align-items:center;gap:6px;margin:2px 14px 2px 0;font-size:13px">${cuadro(g)}${esc(g)} <b>${num(porGrado[g])}</b> <span style="color:#61756b">(${pct(porGrado[g], total)}%)</span></span>`).join('');
+    const barra = `<div style="display:flex;height:10px;border-radius:5px;overflow:hidden;gap:2px;background:#eef3ef;margin:10px 0 12px">${grados.map(g => `<div title="${esc(g)}: ${num(porGrado[g])} tallos" style="width:${porGrado[g] / total * 100}%;background:${colorGrado(g)}"></div>`).join('')}</div>`;
+    const th = 'padding:10px;text-align:right;font-size:12px;font-weight:700;color:#4b5a52;white-space:nowrap';
+    const celda = (v, t) => (v ? `${num(v)} <span style="color:#61756b;font-size:12px">(${pct(v, t)}%)</span>` : '<span style="color:#c8d3cd">–</span>');
+    const tabla = `<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:14px;min-width:420px">
+        <thead><tr style="background:#f3f7f4"><th style="padding:10px;text-align:left;font-size:12px;font-weight:700;color:#4b5a52">${verPor === 'bloque' ? 'Bloque' : 'Variedad'}</th>${grados.map(g => `<th style="${th}">${cuadro(g)} ${esc(g)}</th>`).join('')}<th style="${th}">Total</th></tr></thead>
+        <tbody>${claves.map(k => `<tr style="border-top:1px solid #eef3ef"><td style="padding:10px;font-weight:700">${esc(k)}</td>${grados.map(g => `<td style="padding:10px;text-align:right">${celda(filas[k].g[g], filas[k].total)}</td>`).join('')}<td style="padding:10px;text-align:right;font-weight:800;color:#163827">${num(filas[k].total)}</td></tr>`).join('')}</tbody>
+        <tfoot><tr style="border-top:2px solid #163827;background:#f3f7f4;font-weight:800"><td style="padding:10px">Total</td>${grados.map(g => `<td style="padding:10px;text-align:right">${celda(porGrado[g], total)}</td>`).join('')}<td style="padding:10px;text-align:right;color:#163827">${num(total)}</td></tr></tfoot></table></div>`;
+    const tog = ['variedad', 'bloque'].map(v => `<button type="button" data-ver="${v}" class="pg-b${verPor === v ? ' act' : ''}">Por ${v}</button>`).join('');
+    return `<div style="margin-top:22px"><div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px"><h4 style="font-size:14px;font-weight:700;margin:0">Distribución por grado <span style="font-weight:400;font-size:12px;color:#61756b">(porcentaje dentro de cada fila)</span></h4><div class="pg-tog">${tog}</div></div>
+        <div style="margin-top:8px">${chips}</div>${barra}${tabla}</div>`;
+}
+
+function pintarGrados() {
+    const d = document.getElementById('dia-grados'), p = document.getElementById('periodo-grados');
+    if (d) d.innerHTML = htmlGrados(ultimaDia);
+    if (p) p.innerHTML = htmlGrados(ultimaPeriodo);
+}
+
+(function () {
+    const st = document.createElement('style');
+    st.textContent = `.pg-tog{display:inline-flex;border:1px solid #e3e9e5;border-radius:10px;overflow:hidden}
+        .pg-b{border:none;background:#fff;color:#61756b;padding:6px 12px;font-size:13px;font-weight:600;cursor:pointer}
+        .pg-b.act{background:#163827;color:#fff}`;
+    document.head.appendChild(st);
+    document.addEventListener('click', e => {
+        const b = e.target.closest('[data-ver]');
+        if (b) { verPor = b.dataset.ver; pintarGrados(); }
+    });
+})();
+
 // ---------- Carga de datos ----------
 // La producción sale de las entradas al cuarto frío (Inventario Principal)
 function normalizarEntradas(entradas) {
@@ -78,6 +129,7 @@ function normalizarEntradas(entradas) {
         fecha: e.fecha || e.fechaIngreso,
         bloque: e.bloque || 'Sin bloque',
         variedad: e.variedad || 'Sin variedad',
+        grado: e.grado || 'Sin grado',
         tallos: Number(e.totalTallos) || (Number(e.tabacos || 0) * Number(e.tallosPorTabaco || 40)) || 0
     })).filter(r => r.fecha && r.tallos > 0);
 }
@@ -99,6 +151,10 @@ async function cargarProduccion() {
 
     document.getElementById('filtro-variedad').innerHTML = '<option value="">Todas las variedades</option>' +
         variedadesConocidas.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join('');
+
+    gradosConocidos = [...new Set([...(listas.grados || []), ...registros.map(r => r.grado)])].sort(ordenGrado);
+    document.getElementById('filtro-grado-prod').innerHTML = '<option value="">Todos los grados</option>' +
+        gradosConocidos.map(g => `<option value="${esc(g)}">${esc(g)}</option>`).join('');
 
     document.getElementById('lista-checkbox-bloques').innerHTML = bloquesConocidos.map(b => `
         <label class="flex items-center gap-2 text-xs font-medium text-slate-700 cursor-pointer hover:bg-slate-50 p-1 rounded">
@@ -210,6 +266,8 @@ window.renderizarDia = function () {
 
     if (!lista.length) {
         resumen.textContent = '';
+        ultimaDia = [];
+        pintarGrados();
         detalle.innerHTML = '<p class="text-sm text-slate-400 py-3">No hay entradas al cuarto frío registradas este día. Regístralas en <a href="index.html" class="font-bold text-emerald-700 underline">Inventario Principal</a>.</p>';
         return;
     }
@@ -217,6 +275,8 @@ window.renderizarDia = function () {
     const nVariedades = new Set(lista.map(r => r.variedad)).size;
     resumen.innerHTML = `<span class="text-3xl font-black text-slate-900">${num(total)}</span> tallos en ${nBloques} bloque${nBloques > 1 ? 's' : ''} y ${nVariedades} variedad${nVariedades > 1 ? 'es' : ''}`;
     detalle.innerHTML = htmlMatriz(lista);
+    ultimaDia = lista;
+    pintarGrados();
 };
 
 // ---------- Gráfica y detalle del periodo ----------
@@ -225,6 +285,7 @@ window.renderizarProduccion = function () {
     const tipo = val('filtro-tipo-temporal');
     const dim = val('filtro-comparar') || 'bloque';
     const variedad = val('filtro-variedad');
+    const grado = val('filtro-grado-prod');
     const bloques = bloquesSeleccionados();
 
     let fechas;
@@ -233,11 +294,13 @@ window.renderizarProduccion = function () {
     else fechas = fechasDeSemana(parseInt(val('input-semana')) || 1, parseInt(val('input-anio')) || new Date().getFullYear());
 
     const enPeriodo = new Set(fechas);
-    const lista = registros.filter(r => enPeriodo.has(r.fecha) && bloques.includes(r.bloque) && (!variedad || r.variedad === variedad));
+    const lista = registros.filter(r => enPeriodo.has(r.fecha) && bloques.includes(r.bloque) && (!variedad || r.variedad === variedad) && (!grado || r.grado === grado));
 
     document.getElementById('info-filtro-activo').textContent =
-        `${variedad || 'Todas las variedades'}, ${bloques.length === bloquesConocidos.length ? 'todos los bloques' : bloques.length + ' bloque(s)'}`;
+        `${variedad || 'Todas las variedades'}, ${grado || 'todos los grados'}, ${bloques.length === bloquesConocidos.length ? 'todos los bloques' : bloques.length + ' bloque(s)'}`;
     document.getElementById('detalle-periodo').innerHTML = htmlMatriz(lista);
+    ultimaPeriodo = lista;
+    pintarGrados();
 
     if (grafico) grafico.destroy();
     grafico = null;
@@ -259,10 +322,10 @@ window.renderizarProduccion = function () {
         ? `Total: <b>${num(total)}</b> tallos`
         : `Total: <b>${num(total)}</b> tallos. Promedio: <b>${num(total / dias.length)}</b> por día con entradas. Mejor día: <b>${mejor}</b> con <b>${num(porDia[mejor])}</b>.`;
 
-    const grupos = [...new Set(lista.map(r => r[dim]))].sort(natural);
-    const conocidos = dim === 'bloque' ? bloquesConocidos : variedadesConocidas;
+    const grupos = [...new Set(lista.map(r => r[dim]))].sort(dim === 'grado' ? ordenGrado : natural);
+    const conocidos = dim === 'bloque' ? bloquesConocidos : dim === 'grado' ? gradosConocidos : variedadesConocidas;
     // El color sigue a cada bloque o variedad, no a su posición: al filtrar no cambia
-    const color = g => dim === 'variedad' && /freedom/i.test(g) ? '#b4233b' : PALETA[Math.max(0, conocidos.indexOf(g)) % PALETA.length];
+    const color = g => dim === 'grado' ? colorGrado(g) : dim === 'variedad' && /freedom/i.test(g) ? '#b4233b' : PALETA[Math.max(0, conocidos.indexOf(g)) % PALETA.length];
     const canvas = document.getElementById('graficoProduccion');
     const leyenda = obtenerLeyenda();
     leyenda.innerHTML = '';
